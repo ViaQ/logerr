@@ -15,7 +15,6 @@ var (
 )
 
 const (
-	keyError   string = "error"
 	keyMessage string = "msg"
 	keyCause   string = "cause"
 )
@@ -38,8 +37,7 @@ func New(msg string, keysAndValues ...interface{}) *KVError {
 
 // Wrap wraps an error as a new error with keys and values
 func Wrap(err error, msg string, keysAndValues ...interface{}) *KVError {
-	e := New(msg, append(keysAndValues, []interface{}{keyError, err}...)...)
-	e.kv[keyError] = err
+	e := New(msg, append(keysAndValues, []interface{}{keyCause, err}...)...)
 	return e
 }
 
@@ -51,9 +49,9 @@ type KVError struct {
 // Unwrap returns the error that caused this error
 func (e *KVError) Unwrap() error {
 	if cause, ok := e.kv[keyCause]; ok {
-		if e, ok := cause.(error); ok {
-			return e
-		}
+		e, _ := cause.(error)
+		// if ok is false then e will be empty anyway so no need to check if ok
+		return e
 	}
 	return nil
 }

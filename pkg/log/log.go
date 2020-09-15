@@ -10,9 +10,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func init() {
-
-}
+const (
+	keyError = "cause"
+)
 
 var (
 	mtx sync.RWMutex
@@ -111,7 +111,7 @@ func Error(err error, msg string, keysAndValues ...interface{}) {
 		// If err is not structured then convert to a KVError so that it is structured for consistency
 		e = errors.New(err.Error())
 	}
-	logger.Error(nil, msg, append(keysAndValues, []interface{}{"error", e}...)...)
+	logger.Error(nil, msg, append(keysAndValues, []interface{}{keyError, e}...)...)
 }
 
 // WithValues adds some key-value pairs of context to a logger.
