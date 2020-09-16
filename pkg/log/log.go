@@ -3,7 +3,6 @@ package log
 import (
 	"sync"
 
-	"github.com/ViaQ/logerr/pkg/errors"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
@@ -11,7 +10,7 @@ import (
 )
 
 const (
-	keyError = "cause"
+	KeyError = "cause"
 )
 
 var (
@@ -36,6 +35,18 @@ var (
 	}
 )
 
+// UseLogger bypasses the requirement for Init and sets the logger to l
+func UseLogger(l logr.Logger) {
+	mtx.Lock()
+	defer mtx.Unlock()
+	useLogger(l)
+}
+
+func useLogger(l logr.Logger) {
+	logger = WrapLogger(l)
+}
+
+// Option is a configuration option
 type Option func(*zap.Config)
 
 // WithNoTimestamp removes the timestamp from the logged output
@@ -46,16 +57,22 @@ func WithNoTimestamp() Option {
 	}
 }
 
+// MustInit calls Init and panics if an error is returned
+func MustInit(component string, opts []Option, keyValuePairs ...interface{}) {
+	if err := Init(component, opts, keyValuePairs...); err != nil {
+		panic(err)
+	}
+}
 
 // Init initializes the logger. This is required to use logging correctly
-// component is the name of the component being used to log messages. Typically this is your application name
-// keyValuePairs are default key/value pairs to be used with all logs in the future
+// component is the name of the component being used to log messages.
+// Typically this is your application name. keyValuePairs are key/value
+// pairs to be used with all logs in the future
 func Init(component string, opts []Option, keyValuePairs ...interface{}) error {
 	mtx.Lock()
 	defer mtx.Unlock()
 
 	defaultConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
-	defaultConfig.EncoderConfig.TimeKey = "time"
 	for _, opt := range opts {
 		opt(defaultConfig)
 	}
@@ -65,10 +82,9 @@ func Init(component string, opts []Option, keyValuePairs ...interface{}) error {
 		return err
 	}
 
-	logger = zapr.NewLogger(zl).
-		WithName(component)
+	useLogger(zapr.NewLogger(zl).WithName(component))
 	if len(keyValuePairs) > 0 {
-		logger = logger.WithValues(keyValuePairs)
+		useLogger(logger.WithValues(keyValuePairs))
 	}
 	return nil
 }
@@ -79,8 +95,6 @@ func Init(component string, opts []Option, keyValuePairs ...interface{}) error {
 // the log line.  The key/value pairs can then be used to add additional
 // variable information.  The key/value pairs should alternate string
 // keys and arbitrary values.
-//
-// This is a package level function that is a shortcut for log.Logger().Info(...)
 func Info(msg string, keysAndValues ...interface{}) {
 	mtx.RLock()
 	defer mtx.RUnlock()
@@ -95,29 +109,14 @@ func Info(msg string, keysAndValues ...interface{}) {
 // The msg field should be used to add context to any underlying error,
 // while the err field should be used to attach the actual error that
 // triggered this log line, if present.
-//
-// This is a package level function that is a shortcut for log.Logger().Error(...)
 func Error(err error, msg string, keysAndValues ...interface{}) {
 	mtx.RLock()
 	defer mtx.RUnlock()
-	// this uses a nil err because the base zapr.Error implementation enforces zap.Error(err)
-	// which converts the provided err to a standard string. Since we are using a complex err
-	// which could be a pkg/errors.KVError we want to pass err as a complex object which zap
-	// can then serialize according to KVError.MarshalLogObject()
-	var e error
-	if ee, ok := err.(errors.Error); ok {
-		e = ee
-	} else {
-		// If err is not structured then convert to a KVError so that it is structured for consistency
-		e = errors.New(err.Error())
-	}
-	logger.Error(nil, msg, append(keysAndValues, []interface{}{keyError, e}...)...)
+	logger.Error(err, msg, keysAndValues...)
 }
 
 // WithValues adds some key-value pairs of context to a logger.
 // See Info for documentation on how key/value pairs work.
-//
-// This is a package level function that is a shortcut for log.Logger().WithValues(...)
 func WithValues(keysAndValues ...interface{}) logr.Logger {
 	mtx.RLock()
 	defer mtx.RUnlock()
@@ -129,8 +128,6 @@ func WithValues(keysAndValues ...interface{}) logr.Logger {
 // suffixes to the logger's name.  It's strongly recommended
 // that name segments contain only letters, digits, and hyphens
 // (see the package documentation for more information).
-//
-// This is a package level function that is a shortcut for log.Logger().WithName(...)
 func WithName(name string) logr.Logger {
 	mtx.RLock()
 	defer mtx.RUnlock()

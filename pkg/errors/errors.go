@@ -46,6 +46,11 @@ type KVError struct {
 	kv map[string]interface{}
 }
 
+// KVs returns the key/value pairs associated with this error
+func (e *KVError) KVs() map[string]interface{} {
+	return e.kv
+}
+
 // Unwrap returns the error that caused this error
 func (e *KVError) Unwrap() error {
 	if cause, ok := e.kv[keyCause]; ok {
@@ -69,6 +74,15 @@ func (e *KVError) Message() string {
 		return fmt.Sprint(msg)
 	}
 	return ""
+}
+
+// Add adds key/value pairs to an error and returns the error
+// WARNING: The original error is modified with this operation
+func (e *KVError) Add(keyValuePairs ...interface{}) *KVError {
+	for k, v := range toMap(keyValuePairs...) {
+		e.kv[k] = v
+	}
+	return e
 }
 
 func (e *KVError) MarshalJSON() ([]byte, error) {
@@ -104,7 +118,7 @@ func toMap(keysAndValues ...interface{}) map[string]interface{} {
 		if i%2 == 1 {
 			continue
 		}
-		if len(keysAndValues) <= i {
+		if len(keysAndValues) <= i+1 {
 			continue
 		}
 		kve[fmt.Sprintf("%s", kv)] = keysAndValues[i+1]

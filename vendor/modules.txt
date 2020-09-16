@@ -24,5 +24,6 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
+go.uber.org/zap/zaptest/observer
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
