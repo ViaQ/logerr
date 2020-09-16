@@ -35,6 +35,50 @@ var (
 	}
 )
 
+// Init initializes the logger. This is required to use logging correctly
+// component is the name of the component being used to log messages.
+// Typically this is your application name. keyValuePairs are key/value
+// pairs to be used with all logs in the future
+func Init(component string, keyValuePairs ...interface{}) error {
+	return InitWithOptions(component, nil, keyValuePairs...)
+}
+
+// MustInit calls Init and panics if it returns an error
+func MustInit(component string, keyValuePairs ...interface{}) {
+	if err := Init(component, keyValuePairs...); err != nil {
+		panic(err)
+	}
+}
+
+// InitWithOptions inits the logger with the provided opts
+func InitWithOptions(component string, opts []Option, keyValuePairs ...interface{}) error {
+	mtx.Lock()
+	defer mtx.Unlock()
+
+	defaultConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	for _, opt := range opts {
+		opt(defaultConfig)
+	}
+
+	zl, err := defaultConfig.Build(zap.AddCallerSkip(2))
+	if err != nil {
+		return err
+	}
+
+	useLogger(zapr.NewLogger(zl).WithName(component))
+	if len(keyValuePairs) > 0 {
+		useLogger(logger.WithValues(keyValuePairs))
+	}
+	return nil
+}
+
+// MustInitWithOptions calls InitWithOptions and panics if an error is returned
+func MustInitWithOptions(component string, opts []Option, keyValuePairs ...interface{}) {
+	if err := InitWithOptions(component, opts, keyValuePairs...); err != nil {
+		panic(err)
+	}
+}
+
 // UseLogger bypasses the requirement for Init and sets the logger to l
 func UseLogger(l logr.Logger) {
 	mtx.Lock()
@@ -57,36 +101,19 @@ func WithNoTimestamp() Option {
 	}
 }
 
-// MustInit calls Init and panics if an error is returned
-func MustInit(component string, opts []Option, keyValuePairs ...interface{}) {
-	if err := Init(component, opts, keyValuePairs...); err != nil {
-		panic(err)
+// WithCaller logs the "caller" field
+// Example: {"caller": "pkg/log/log.go:32"}
+func WithCaller() Option {
+	return func(c *zap.Config) {
+		c.DisableCaller = false
 	}
 }
 
-// Init initializes the logger. This is required to use logging correctly
-// component is the name of the component being used to log messages.
-// Typically this is your application name. keyValuePairs are key/value
-// pairs to be used with all logs in the future
-func Init(component string, opts []Option, keyValuePairs ...interface{}) error {
-	mtx.Lock()
-	defer mtx.Unlock()
-
-	defaultConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
-	for _, opt := range opts {
-		opt(defaultConfig)
+// WithStack logs the "stack" field with the stacktrace
+func WithStack() Option {
+	return func(c *zap.Config) {
+		c.DisableStacktrace = false
 	}
-
-	zl, err := defaultConfig.Build(zap.AddCallerSkip(2))
-	if err != nil {
-		return err
-	}
-
-	useLogger(zapr.NewLogger(zl).WithName(component))
-	if len(keyValuePairs) > 0 {
-		useLogger(logger.WithValues(keyValuePairs))
-	}
-	return nil
 }
 
 // Info logs a non-error message with the given key/value pairs as context.
