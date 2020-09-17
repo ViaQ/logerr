@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/ViaQ/logerr/pkg/errors"
+	"github.com/ViaQ/logerr/errors"
 	"github.com/go-logr/logr"
 )
 

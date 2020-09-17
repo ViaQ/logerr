@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ViaQ/logerr/pkg/errors"
-	"github.com/ViaQ/logerr/pkg/log"
+	"github.com/ViaQ/logerr/errors"
+	"github.com/ViaQ/logerr/log"
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

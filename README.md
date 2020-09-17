@@ -20,8 +20,8 @@ This package does:
 package main
 
 import (
-        "github.com/ViaQ/logerr/pkg/errors"
-        "github.com/ViaQ/logerr/pkg/log"
+        "github.com/ViaQ/logerr/errors"
+        "github.com/ViaQ/logerr/log"
 )
 
 func Logging() {
