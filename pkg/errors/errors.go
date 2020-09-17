@@ -37,6 +37,9 @@ func New(msg string, keysAndValues ...interface{}) *KVError {
 
 // Wrap wraps an error as a new error with keys and values
 func Wrap(err error, msg string, keysAndValues ...interface{}) *KVError {
+	if err == nil {
+		return nil
+	}
 	e := New(msg, append(keysAndValues, []interface{}{keyCause, err}...)...)
 	return e
 }

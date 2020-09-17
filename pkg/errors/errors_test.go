@@ -23,6 +23,10 @@ func TestWrap_StoresKeysAndValues(t *testing.T) {
 	require.EqualValues(t, "world", err.kv["hello"])
 }
 
+func TestWrap_ReturnsNilWhenErrIsNil(t *testing.T) {
+	assert.Nil(t, Wrap(nil, "some error"))
+}
+
 func TestError_ReturnsMessageWhenThereIsNoCause(t *testing.T) {
 	msg := "hello, world"
 	err := New(msg)
