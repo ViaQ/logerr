@@ -20,7 +20,6 @@ This package does:
 package main
 
 import (
-        "io/ioutil"
         "github.com/ViaQ/logerr/pkg/errors"
         "github.com/ViaQ/logerr/pkg/log"
 )
@@ -40,7 +39,7 @@ func Logging() {
         // }
 
         // Nested Errors
-        err = TrySomething() 
+        err = TrySomethingElse() 
         log.Error(err, "failed to do something", "application", "example")
         // {
         //  "level": "error",
