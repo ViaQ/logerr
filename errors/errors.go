@@ -104,6 +104,15 @@ func Unwrap(err error) error {
 	return errors.Unwrap(err)
 }
 
+// Root unwraps the error until it reaches the root error
+func Root(err error) error {
+	root := err
+	for next := Unwrap(root); next != nil; next = Unwrap(root) {
+		root = next
+	}
+	return root
+}
+
 // Is provides compatibility with the standard errors package
 func Is(err, target error) bool {
 	return errors.Is(err, target)

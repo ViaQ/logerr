@@ -91,6 +91,12 @@ func TestKVError_Add(t *testing.T) {
 	require.EqualValues(t, expected, err.KVs())
 }
 
+func TestRoot_FindsTheRootError(t *testing.T) {
+	root := io.ErrUnexpectedEOF
+	err := Wrap(Wrap(Wrap(root, "e1"), "e2"), "e3")
+	require.Equal(t, root, Root(err))
+}
+
 type MyError struct {
 	Letter string
 }
