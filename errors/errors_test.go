@@ -81,8 +81,7 @@ func TestAs(t *testing.T) {
 }
 
 func TestKVError_Add(t *testing.T) {
-	err := New("hello, world", "key", "value")
-	err.Add("key2", "value2")
+	err := New("hello, world", "key", "value").Add("key2", "value2")
 	expected := map[string]interface{}{
 		"msg": "hello, world",
 		"key": "value",
@@ -95,6 +94,16 @@ func TestRoot_FindsTheRootError(t *testing.T) {
 	root := io.ErrUnexpectedEOF
 	err := Wrap(Wrap(Wrap(root, "e1"), "e2"), "e3")
 	require.Equal(t, root, Root(err))
+}
+
+func TestKVError_Ctx(t *testing.T) {
+	errCtx := Context("k1", "v1", "k2", "v2")
+	err := New("failed something or other").Ctx(errCtx)
+	for k, v := range toMap(errCtx) {
+		require.Contains(t, err, k)
+		require.EqualValues(t, v, err.kv[k])
+	}
+
 }
 
 type MyError struct {
