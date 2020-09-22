@@ -55,6 +55,16 @@ func (e *KVError) KVs() map[string]interface{} {
 	return e.kv
 }
 
+// KVSlice returns the key/value pairs associated with this error
+// as a slice
+func (e *KVError) KVSlice() []interface{} {
+	s := make([]interface{}, 0, len(e.kv)*2)
+	for k, v := range e.kv {
+		s = append(s, k, v)
+	}
+	return s
+}
+
 // Unwrap returns the error that caused this error
 func (e *KVError) Unwrap() error {
 	if cause, ok := e.kv[keyCause]; ok {
@@ -104,6 +114,17 @@ func (e *KVError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 func (e *KVError) Ctx(ctx ErrorContext) *KVError {
 	e.kv = appendMap(e.kv, toMap(ctx...))
 	return e
+}
+
+// Wrap sets err as the cause of this error and appends optional keysAndValues
+func (e *KVError) Wrap(err error, keysAndValues ...interface{}) *KVError {
+	ne := e.deepCopy().Add(keysAndValues...)
+	ne.kv[keyCause] = err
+	return ne
+}
+
+func (e *KVError) deepCopy() *KVError {
+	return New(e.Message(), e.KVSlice()...)
 }
 
 // Unwrap provides compatibility with the standard errors package

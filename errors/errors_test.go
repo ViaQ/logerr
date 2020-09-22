@@ -90,6 +90,19 @@ func TestKVError_Add(t *testing.T) {
 	require.EqualValues(t, expected, err.KVs())
 }
 
+func TestKVError_Wrap(t *testing.T) {
+	base := New("a breaking change", "key1", "value1")
+	err := base.Wrap(io.ErrShortWrite, "key2", "value2")
+	assert.True(t, Is(err, io.ErrShortWrite), "expected err to be io.ErrShortWrite")
+	expected := map[string]interface{}{
+		"msg": "a breaking change",
+		"key1": "value1",
+		"key2": "value2",
+		"cause": io.ErrShortWrite,
+	}
+	assert.EqualValues(t, expected, err.KVs())
+}
+
 func TestRoot_FindsTheRootError(t *testing.T) {
 	root := io.ErrUnexpectedEOF
 	err := Wrap(Wrap(Wrap(root, "e1"), "e2"), "e3")
