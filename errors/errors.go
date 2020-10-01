@@ -151,7 +151,7 @@ func Unwrap(err error) error {
 //   if err != nil {
 //       return errors.Wrap(err, "failed to update cluster").Ctx(errCtx)
 //   }
-func Context(keysAndValues ...interface{}) Context {
+func NewContext(keysAndValues ...interface{}) Context {
 	return keysAndValues
 }
 

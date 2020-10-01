@@ -83,8 +83,8 @@ func TestAs(t *testing.T) {
 func TestKVError_Add(t *testing.T) {
 	err := New("hello, world", "key", "value").Add("key2", "value2")
 	expected := map[string]interface{}{
-		"msg": "hello, world",
-		"key": "value",
+		"msg":  "hello, world",
+		"key":  "value",
 		"key2": "value2",
 	}
 	require.EqualValues(t, expected, err.KVs())
@@ -95,9 +95,9 @@ func TestKVError_Wrap(t *testing.T) {
 	err := base.Wrap(io.ErrShortWrite, "key2", "value2")
 	assert.True(t, Is(err, io.ErrShortWrite), "expected err to be io.ErrShortWrite")
 	expected := map[string]interface{}{
-		"msg": "a breaking change",
-		"key1": "value1",
-		"key2": "value2",
+		"msg":   "a breaking change",
+		"key1":  "value1",
+		"key2":  "value2",
 		"cause": io.ErrShortWrite,
 	}
 	assert.EqualValues(t, expected, err.KVs())
@@ -110,7 +110,7 @@ func TestRoot_FindsTheRootError(t *testing.T) {
 }
 
 func TestKVError_Ctx(t *testing.T) {
-	errCtx := Context("k1", "v1", "k2", "v2")
+	errCtx := NewContext("k1", "v1", "k2", "v2")
 	err := New("failed something or other").Ctx(errCtx)
 	for k, v := range toMap(errCtx) {
 		require.Contains(t, err, k)
@@ -124,5 +124,5 @@ type MyError struct {
 }
 
 func (e MyError) Error() string {
-		return e.Letter
+	return e.Letter
 }
