@@ -21,7 +21,7 @@ const (
 
 // Error is a structured error
 type Error interface {
-	Ctx(ErrorContext) *KVError
+	Ctx(Context) *KVError
 	Error() string
 	Message() string
 	Unwrap() error
@@ -110,8 +110,8 @@ func (e *KVError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return nil
 }
 
-// Ctx appends ErrorContext to the error
-func (e *KVError) Ctx(ctx ErrorContext) *KVError {
+// Ctx appends Context to the error
+func (e *KVError) Ctx(ctx Context) *KVError {
 	e.kv = appendMap(e.kv, toMap(ctx...))
 	return e
 }
@@ -151,14 +151,14 @@ func Unwrap(err error) error {
 //   if err != nil {
 //       return errors.Wrap(err, "failed to update cluster").Ctx(errCtx)
 //   }
-func Context(keysAndValues ...interface{}) ErrorContext {
+func Context(keysAndValues ...interface{}) Context {
 	return keysAndValues
 }
 
-// ErrorContext is keyValuePairs wrapped to use later. Usage of this
+// Context is keyValuePairs wrapped to use later. Usage of this
 // directly is not necessary
 // See Context for more information
-type ErrorContext []interface{}
+type Context []interface{}
 
 // Root unwraps the error until it reaches the root error
 func Root(err error) error {
