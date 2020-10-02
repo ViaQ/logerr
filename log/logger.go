@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/ViaQ/logerr/errors"
+	"github.com/ViaQ/logerr/kverrors"
 	"github.com/go-logr/logr"
 )
 
@@ -33,11 +33,11 @@ func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
 
 func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
 	var e error
-	if ee, ok := err.(errors.Error); ok {
+	if ee, ok := err.(kverrors.Error); ok {
 		e = ee
 	} else {
 		// If err is not structured then convert to a KVError so that it is structured for consistency
-		e = errors.New(err.Error())
+		e = kverrors.New(err.Error())
 	}
 	// this uses a nil err because the base zapr.Logger.Error implementation enforces zap.Error(err)
 	// which converts the provided err to a standard string. Since we are using a complex err

@@ -1,4 +1,4 @@
-package errors
+package kverrors
 
 import (
 	"encoding/json"
@@ -137,19 +137,19 @@ func Unwrap(err error) error {
 // information that will be used with any returned error
 //
 // Example:
-//   errCtx := errors.Context("cluster", clusterName,
+//   errCtx := kverrors.Context("cluster", clusterName,
 //       "namespace", namespace)
 //
 //   ...
 //
 //   if err != nil {
-//       return errors.Wrap(err, "failed to get namespace").Ctx(errCtx)
+//       return kverrors.Wrap(err, "failed to get namespace").Ctx(errCtx)
 //   }
 //
 //   ...
 //
 //   if err != nil {
-//       return errors.Wrap(err, "failed to update cluster").Ctx(errCtx)
+//       return kverrors.Wrap(err, "failed to update cluster").Ctx(errCtx)
 //   }
 func NewContext(keysAndValues ...interface{}) Context {
 	return keysAndValues
@@ -167,16 +167,6 @@ func Root(err error) error {
 		root = next
 	}
 	return root
-}
-
-// Is provides compatibility with the standard errors package
-func Is(err, target error) bool {
-	return errors.Is(err, target)
-}
-
-// As provides compatibility with the standard errors package
-func As(err error, target interface{}) bool {
-	return errors.As(err, target)
 }
 
 func toMap(keysAndValues ...interface{}) map[string]interface{} {

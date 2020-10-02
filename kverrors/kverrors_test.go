@@ -1,6 +1,7 @@
-package errors
+package kverrors
 
 import (
+	"errors"
 	"io"
 	"testing"
 
@@ -62,21 +63,21 @@ func TestKVError_Unwrap_ReturnsCause(t *testing.T) {
 func TestIs_MatchesError(t *testing.T) {
 	base := io.ErrUnexpectedEOF
 	err := Wrap(base, "something broke")
-	assert.True(t, Is(err, base))
+	assert.True(t, errors.Is(err, base))
 }
 
 func TestIs_MatchesDeepError(t *testing.T) {
 	base := io.ErrUnexpectedEOF
 	err1 := Wrap(base, "something broke")
 	err2 := Wrap(err1, "something else broke")
-	assert.True(t, Is(err2, base))
+	assert.True(t, errors.Is(err2, base))
 }
 
 func TestAs(t *testing.T) {
 	err := Wrap(&MyError{"a"}, "some error")
 
 	var expected *MyError
-	require.True(t, As(err, &expected), "expected %T to be %T", err, expected)
+	require.True(t, errors.As(err, &expected), "expected %T to be %T", err, expected)
 	require.EqualValues(t, "a", expected.Letter)
 }
 
@@ -93,7 +94,7 @@ func TestKVError_Add(t *testing.T) {
 func TestKVError_Wrap(t *testing.T) {
 	base := New("a breaking change", "key1", "value1")
 	err := base.Wrap(io.ErrShortWrite, "key2", "value2")
-	assert.True(t, Is(err, io.ErrShortWrite), "expected err to be io.ErrShortWrite")
+	assert.True(t, errors.Is(err, io.ErrShortWrite), "expected err to be io.ErrShortWrite")
 	expected := map[string]interface{}{
 		"msg":   "a breaking change",
 		"key1":  "value1",

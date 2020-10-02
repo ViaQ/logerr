@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ViaQ/logerr/errors"
+	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +46,7 @@ func TestError_nokvs(t *testing.T) {
 	core, obs := observer.New(zapcore.ErrorLevel)
 	log.UseLogger(zapr.NewLogger(zap.New(core)))
 
-	err := errors.New("an error")
+	err := kverrors.New("an error")
 	log.Error(err, "hello, world")
 
 	logs := obs.All()
@@ -65,7 +65,7 @@ func TestError_kvs(t *testing.T) {
 	core, obs := observer.New(zapcore.ErrorLevel)
 	log.UseLogger(zapr.NewLogger(zap.New(core)))
 
-	err := errors.New("an error")
+	err := kverrors.New("an error")
 	log.Error(err, "hello, world", "key", "value")
 
 	logs := obs.All()
@@ -85,7 +85,7 @@ func TestError_pkg_error_kvs(t *testing.T) {
 	core, obs := observer.New(zapcore.ErrorLevel)
 	log.UseLogger(zapr.NewLogger(zap.New(core)))
 
-	err := errors.New("an error", "key", "value")
+	err := kverrors.New("an error", "key", "value")
 	log.Error(err, "hello, world")
 
 	logs := obs.All()
@@ -107,8 +107,8 @@ func TestError_nested_error(t *testing.T) {
 	core, obs := observer.New(zapcore.ErrorLevel)
 	log.UseLogger(zapr.NewLogger(zap.New(core)))
 
-	err1 := errors.New("error1", "order", 1)
-	err := errors.Wrap(err1, "main error", "key", "value")
+	err1 := kverrors.New("error1", "order", 1)
+	err := kverrors.Wrap(err1, "main error", "key", "value")
 	log.Error(err, "hello, world")
 
 	logs := obs.All()

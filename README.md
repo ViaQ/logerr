@@ -1,6 +1,6 @@
 # logerr
 
-logerr provides structured logging and errors packages that work together.
+logerr provides structured logging and kverrors packages that work together.
 
 This package does not:
 
@@ -20,7 +20,7 @@ This package does:
 package main
 
 import (
-        "github.com/ViaQ/logerr/errors"
+        "github.com/ViaQ/logerr/kverrors"
         "github.com/ViaQ/logerr/log"
 )
 
@@ -59,11 +59,11 @@ func Logging() {
 
 
 func TrySomething() error {
-        return errors.New("this was never meant to pass", "reason", "unimplemented")
+        return kverrors.New("this was never meant to pass", "reason", "unimplemented")
 }
 
 func TrySomethingElse() error {
 	    err := TrySomething()
-        return errors.Wrap(err, "failed to execute method", "method", "TrySomething")
+        return kverrors.Wrap(err, "failed to execute method", "method", "TrySomething")
 }
 ```
