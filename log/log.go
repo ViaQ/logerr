@@ -37,8 +37,9 @@ var (
 
 // Init initializes the logger. This is required to use logging correctly
 // component is the name of the component being used to log messages.
-// Typically this is your application name. keyValuePairs are key/value
-// pairs to be used with all logs in the future
+// Typically this is your application name.
+//
+// keyValuePairs are key/value pairs to be used with all logs in the future
 func Init(component string, keyValuePairs ...interface{}) error {
 	return InitWithOptions(component, nil, keyValuePairs...)
 }
@@ -69,6 +70,7 @@ func InitWithOptions(component string, opts []Option, keyValuePairs ...interface
 	if len(keyValuePairs) > 0 {
 		useLogger(logger.WithValues(keyValuePairs))
 	}
+
 	return nil
 }
 
@@ -116,6 +118,14 @@ func WithStack() Option {
 	}
 }
 
+// WithVerbosity configures the verbosity output
+func WithVerbosity(level uint8) Option {
+	l := -1 * int(level)
+	return func(c *zap.Config) {
+		c.Level = zap.NewAtomicLevelAt(zapcore.Level(l))
+	}
+}
+
 // Info logs a non-error message with the given key/value pairs as context.
 //
 // The msg argument should be used to add some constant description to
@@ -159,4 +169,12 @@ func WithName(name string) logr.Logger {
 	mtx.RLock()
 	defer mtx.RUnlock()
 	return logger.WithName(name)
+}
+
+// V returns an Logger value for a specific verbosity level, relative to
+// this Logger.  In other words, V values are additive.  V higher verbosity
+// level means a log message is less important.
+// V(level uint8) Logger
+func V(level uint8) logr.Logger {
+	return logger.V(int(level))
 }

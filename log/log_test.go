@@ -152,6 +152,36 @@ func TestWithValues_AddsValues(t *testing.T) {
 	)
 }
 
+func TestLogger_V(t *testing.T) {
+	for verbosity := uint8(1); verbosity < 5; verbosity++ {
+		cnf := &zap.Config{Level: zap.NewAtomicLevelAt(zapcore.PanicLevel)}
+		// We could easily just configure this by doing -1 * verbosity, but we should
+		// intentionally bypass the simple configuration and use the log.WithVerbosity to
+		// guarantee log.WithVerbosity works correctly. It manipulates cnf and we then
+		// use cnf.Level below. If WithVerbosity changes somehow then this test will break
+		log.WithVerbosity(verbosity)(cnf)
+
+		core, obs := observer.New(cnf.Level)
+		log.UseLogger(zapr.NewLogger(zap.New(core)))
+
+		// loop through log levels 1-5 and log all of them to verify that they either
+		// are or are not logged according to verbosity above
+		for logLevel := uint8(1); logLevel < 5; logLevel++ {
+			log.V(logLevel).Info("hello, world")
+			logs := obs.TakeAll()
+
+			shouldBeLogged := verbosity >= logLevel
+
+			if shouldBeLogged {
+				assert.Len(t, logs, 1, "expected log to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
+				assert.EqualValues(t, "hello, world", logs[0].Message)
+			} else {
+				assert.Empty(t, logs, "expected NO logs to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
+			}
+		}
+	}
+}
+
 // assertLoggedFields checks that each field exists in the LoggedEntry
 func assertLoggedFields(t *testing.T, entry observer.LoggedEntry, fields map[string]interface{}) {
 	ctx := entry.ContextMap()
@@ -165,3 +195,4 @@ func assertLoggedFields(t *testing.T, entry observer.LoggedEntry, fields map[str
 		require.JSONEq(t, string(expected), string(actual))
 	}
 }
+
