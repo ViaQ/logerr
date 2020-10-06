@@ -109,6 +109,36 @@ func TestKVError_Ctx(t *testing.T) {
 
 }
 
+func TestContext_New_WrapsAllKeysAndValues(t *testing.T) {
+	ctx := NewContext("foo", "bar")
+	err := ctx.New("a broken mess", "baz", "foo")
+
+	expected := map[string]interface{}{
+		"msg":  "a broken mess",
+		"foo":  "bar",
+		"baz": "foo",
+	}
+
+	require.EqualValues(t, expected, KVs(err))
+}
+
+func TestContext_Wrap_WrapsAllKeysAndValues(t *testing.T) {
+	ctx := NewContext("foo", "bar")
+	err := ctx.Wrap(io.ErrNoProgress, "a broken mess", "baz", "foo")
+
+	expected := map[string]interface{}{
+		"msg":  "a broken mess",
+		"foo":  "bar",
+		"baz": "foo",
+	}
+
+	errkvs := KVs(err)
+	for k, v := range expected {
+		require.EqualValues(t, v, errkvs[k])
+	}
+}
+
+
 type MyError struct {
 	Letter string
 }

@@ -167,6 +167,14 @@ func NewContext(keysAndValues ...interface{}) Context {
 // See Context for more information
 type Context []interface{}
 
+func (c Context) New(msg string, keysAndValues ...interface{}) error {
+	return New(msg, append(keysAndValues, c...)...)
+}
+
+func (c Context) Wrap(err error, msg string, keysAndValues ...interface{}) error {
+	return Wrap(err, msg, append(keysAndValues, c...)...)
+}
+
 // Root unwraps the error until it reaches the root error
 func Root(err error) error {
 	root := err
