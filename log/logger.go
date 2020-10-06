@@ -7,12 +7,10 @@ import (
 
 // WrapLogger wraps the logger with the internal Logger
 func WrapLogger(l logr.Logger) *Logger {
-	switch l.(type) {
-	case *Logger:
-		return l.(*Logger)
-	default:
-		return &Logger{l}
+	if lg, ok := l.(*Logger); ok {
+		return lg
 	}
+	return &Logger{l}
 }
 
 // Logger wraps zapr.Logger and fixes the Error method to log errors
@@ -32,10 +30,8 @@ func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
 }
 
 func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
-	var e error
-	if ee, ok := err.(kverrors.Error); ok {
-		e = ee
-	} else {
+	e := err
+	if _, ok := err.(*kverrors.KVError); !ok {
 		// If err is not structured then convert to a KVError so that it is structured for consistency
 		e = kverrors.New(err.Error())
 	}

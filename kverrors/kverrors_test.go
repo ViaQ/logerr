@@ -11,17 +11,17 @@ import (
 
 func TestNew_StoresKeysAndValues(t *testing.T) {
 	err := New("hello, world", "hello", "world")
-	require.EqualValues(t, "world", err.kv["hello"])
+	require.EqualValues(t, "world", KVs(err)["hello"])
 }
 
 func TestWrap_StoresCause(t *testing.T) {
 	err := Wrap(io.ErrUnexpectedEOF, "hello, world")
-	require.EqualValues(t, io.ErrUnexpectedEOF, err.Unwrap())
+	require.EqualValues(t, io.ErrUnexpectedEOF, errors.Unwrap(err))
 }
 
 func TestWrap_StoresKeysAndValues(t *testing.T) {
 	err := Wrap(io.ErrUnexpectedEOF, "hello, world", "hello", "world")
-	require.EqualValues(t, "world", err.kv["hello"])
+	require.EqualValues(t, "world", KVs(err)["hello"])
 }
 
 func TestWrap_ReturnsNilWhenErrIsNil(t *testing.T) {
@@ -43,8 +43,8 @@ func TestError_ReturnsMessageAndCauseWhenThereIsACause(t *testing.T) {
 
 func TestNew_SkipsMissingKeyValues(t *testing.T) {
 	err := New("hello, world", "hello", "world", "missing")
-	require.EqualValues(t, "world", err.kv["hello"])
-	_, ok := err.kv["missing"]
+	require.EqualValues(t, "world", KVs(err)["hello"])
+	_, ok := KVs(err)["missing"]
 	require.False(t, ok)
 }
 
@@ -57,7 +57,7 @@ func TestUnwrap_ReturnsCause(t *testing.T) {
 func TestKVError_Unwrap_ReturnsCause(t *testing.T) {
 	msg := "hello, world"
 	err := Wrap(io.ErrUnexpectedEOF, msg)
-	assert.Equal(t, io.ErrUnexpectedEOF, err.Unwrap())
+	assert.Equal(t, io.ErrUnexpectedEOF, errors.Unwrap(err))
 }
 
 func TestIs_MatchesError(t *testing.T) {
@@ -82,26 +82,14 @@ func TestAs(t *testing.T) {
 }
 
 func TestKVError_Add(t *testing.T) {
-	err := New("hello, world", "key", "value").Add("key2", "value2")
+	err := New("hello, world", "key", "value")
+	err = Add(err, "key2", "value2")
 	expected := map[string]interface{}{
 		"msg":  "hello, world",
 		"key":  "value",
 		"key2": "value2",
 	}
-	require.EqualValues(t, expected, err.KVs())
-}
-
-func TestKVError_Wrap(t *testing.T) {
-	base := New("a breaking change", "key1", "value1")
-	err := base.Wrap(io.ErrShortWrite, "key2", "value2")
-	assert.True(t, errors.Is(err, io.ErrShortWrite), "expected err to be io.ErrShortWrite")
-	expected := map[string]interface{}{
-		"msg":   "a breaking change",
-		"key1":  "value1",
-		"key2":  "value2",
-		"cause": io.ErrShortWrite,
-	}
-	assert.EqualValues(t, expected, err.KVs())
+	require.EqualValues(t, expected, KVs(err))
 }
 
 func TestRoot_FindsTheRootError(t *testing.T) {
@@ -112,10 +100,11 @@ func TestRoot_FindsTheRootError(t *testing.T) {
 
 func TestKVError_Ctx(t *testing.T) {
 	errCtx := NewContext("k1", "v1", "k2", "v2")
-	err := New("failed something or other").Ctx(errCtx)
+	err := New("failed something or other")
+	err = AddCtx(err, errCtx)
 	for k, v := range toMap(errCtx) {
 		require.Contains(t, err, k)
-		require.EqualValues(t, v, err.kv[k])
+		require.EqualValues(t, v, KVs(err)[k])
 	}
 
 }

@@ -120,10 +120,10 @@ func TestError_nested_error(t *testing.T) {
 		map[string]interface{}{
 			log.KeyError: map[string]interface{}{
 				"key": "value",
-				"msg": err.Message(),
+				"msg": kverrors.Message(err),
 				log.KeyError: map[string]interface{}{
 					"order": 1,
-					"msg": err1.Message(),
+					"msg": kverrors.Message(err1),
 				},
 			},
 		},
