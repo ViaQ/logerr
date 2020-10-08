@@ -20,12 +20,8 @@ var (
 	logger = zapr.NewLogger(zap.NewNop())
 
 	defaultConfig = &zap.Config{
-		Level:       zap.NewAtomicLevelAt(zap.InfoLevel),
-		Development: false,
-		Sampling: &zap.SamplingConfig{
-			Initial:    100,
-			Thereafter: 100,
-		},
+		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
+		Development:       false,
 		Encoding:          "json",
 		EncoderConfig:     zap.NewProductionEncoderConfig(),
 		OutputPaths:       []string{"stdout"},

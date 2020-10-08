@@ -2,6 +2,7 @@ package log_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"testing"
 
@@ -123,7 +124,7 @@ func TestError_nested_error(t *testing.T) {
 				"msg": kverrors.Message(err),
 				log.KeyError: map[string]interface{}{
 					"order": 1,
-					"msg": kverrors.Message(err1),
+					"msg":   kverrors.Message(err1),
 				},
 			},
 		},
@@ -160,8 +161,8 @@ func TestLogger_V(t *testing.T) {
 		// guarantee log.WithVerbosity works correctly. It manipulates cnf and we then
 		// use cnf.Level below. If WithVerbosity changes somehow then this test will break
 		log.WithVerbosity(verbosity)(cnf)
-
 		core, obs := observer.New(cnf.Level)
+
 		log.UseLogger(zapr.NewLogger(zap.New(core)))
 
 		// loop through log levels 1-5 and log all of them to verify that they either
@@ -182,6 +183,24 @@ func TestLogger_V(t *testing.T) {
 	}
 }
 
+// This test exists to confirm that the output actually works. There was a previous bug that broke the real logger
+// because DefaultConfig specified a sampling which caused a panic. This uses a real logger and logs just to verify
+// that it _can_ log successfully. There are no assertions because the content of the logs are irrelevant. See
+// TestLogger_V above for a more comprehensive test.
+func TestLogger_V_Integration(t *testing.T) {
+	for verbosity := uint8(1); verbosity < 5; verbosity++ {
+		testName := fmt.Sprintf("verbosity-%d", verbosity)
+		t.Run(testName, func(t *testing.T) {
+			log.MustInitWithOptions(testName, []log.Option{
+				log.WithVerbosity(verbosity),
+			})
+			for logLevel := uint8(1); logLevel < 5; logLevel++ {
+				log.V(logLevel).Info("hello, world")
+			}
+		})
+	}
+}
+
 // assertLoggedFields checks that each field exists in the LoggedEntry
 func assertLoggedFields(t *testing.T, entry observer.LoggedEntry, fields map[string]interface{}) {
 	ctx := entry.ContextMap()
@@ -195,4 +214,3 @@ func assertLoggedFields(t *testing.T, entry observer.LoggedEntry, fields map[str
 		require.JSONEq(t, string(expected), string(actual))
 	}
 }
-
