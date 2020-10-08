@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/ViaQ/logerr/kverrors"
@@ -194,11 +195,19 @@ func TestLogger_V_Integration(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			log.MustInitWithOptions(testName, []log.Option{
 				log.WithVerbosity(verbosity),
+				WithNullOutput(),
 			})
 			for logLevel := uint8(1); logLevel < 5; logLevel++ {
 				log.V(logLevel).Info("hello, world")
 			}
 		})
+	}
+}
+
+func WithNullOutput() log.Option {
+	return func(c *zap.Config) {
+		c.OutputPaths = []string{os.DevNull}
+		c.ErrorOutputPaths = []string{os.DevNull}
 	}
 }
 

@@ -47,6 +47,10 @@ func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
 // while the err field should be used to attach the actual error that
 // triggered this log line, if present.
 func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
+	if err == nil {
+		l.base.Error(nil, msg, keysAndValues...)
+		return
+	}
 	e := err
 	if _, ok := err.(*kverrors.KVError); !ok {
 		// If err is not structured then convert to a KVError so that it is structured for consistency
