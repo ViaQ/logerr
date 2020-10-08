@@ -90,6 +90,7 @@ func (e *KVError) Error() string {
 	return Message(e)
 }
 
+// Message returns the raw error message
 func Message(err error) string {
 	var kve *KVError
 	if !errors.As(err, &kve) {
@@ -114,10 +115,12 @@ func Add(err error, keyValuePairs ...interface{}) error {
 	return kve
 }
 
+// MarshalJSON implements json.Marshaler
 func (e *KVError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.kv)
 }
 
+// MarshalLogObject implements zapcore.ObjectMarshaler so that the error is in a JSONish format when logged
 func (e *KVError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	for k, v := range e.kv {
 		zap.Any(k, v).AddTo(enc)
@@ -130,16 +133,12 @@ func AddCtx(err error, ctx Context) error {
 	return Add(err, ctx...)
 }
 
-func (e *KVError) deepCopy() *KVError {
-	return New(Message(e), KVSlice(e)...).(*KVError)
-}
-
 // Unwrap provides compatibility with the standard errors package
 func Unwrap(err error) error {
 	return errors.Unwrap(err)
 }
 
-// Context creates key/value pairs to be used with errors later in
+// NewContext creates key/value pairs to be used with errors later in
 // the callstack. This provides the ability to create contextual
 // information that will be used with any returned error
 //
@@ -167,10 +166,12 @@ func NewContext(keysAndValues ...interface{}) Context {
 // See Context for more information
 type Context []interface{}
 
+// New creates a new KVError with this context
 func (c Context) New(msg string, keysAndValues ...interface{}) error {
 	return New(msg, append(keysAndValues, c...)...)
 }
 
+// Wrap wraps an error with this context
 func (c Context) Wrap(err error, msg string, keysAndValues ...interface{}) error {
 	return Wrap(err, msg, append(keysAndValues, c...)...)
 }

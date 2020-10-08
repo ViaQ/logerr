@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	// KeyError is the key used to store the error
 	KeyError = "cause"
 )
 

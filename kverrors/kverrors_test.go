@@ -10,17 +10,17 @@ import (
 )
 
 func TestNew_StoresKeysAndValues(t *testing.T) {
-	err := New("hello, world", "hello", "world")
+	err := New(t.Name(), "hello", "world")
 	require.EqualValues(t, "world", KVs(err)["hello"])
 }
 
 func TestWrap_StoresCause(t *testing.T) {
-	err := Wrap(io.ErrUnexpectedEOF, "hello, world")
+	err := Wrap(io.ErrUnexpectedEOF, t.Name())
 	require.EqualValues(t, io.ErrUnexpectedEOF, errors.Unwrap(err))
 }
 
 func TestWrap_StoresKeysAndValues(t *testing.T) {
-	err := Wrap(io.ErrUnexpectedEOF, "hello, world", "hello", "world")
+	err := Wrap(io.ErrUnexpectedEOF, t.Name(), "hello", "world")
 	require.EqualValues(t, "world", KVs(err)["hello"])
 }
 
@@ -29,33 +29,33 @@ func TestWrap_ReturnsNilWhenErrIsNil(t *testing.T) {
 }
 
 func TestError_ReturnsMessageWhenThereIsNoCause(t *testing.T) {
-	msg := "hello, world"
+	msg := t.Name()
 	err := New(msg)
 	require.Equal(t, msg, err.Error())
 }
 
 func TestError_ReturnsMessageAndCauseWhenThereIsACause(t *testing.T) {
-	msg := "hello, world"
+	msg := t.Name()
 	err := Wrap(io.ErrUnexpectedEOF, msg)
 	assert.Contains(t, err.Error(), msg)
 	assert.Contains(t, err.Error(), io.ErrUnexpectedEOF.Error())
 }
 
 func TestNew_SkipsMissingKeyValues(t *testing.T) {
-	err := New("hello, world", "hello", "world", "missing")
+	err := New(t.Name(), "hello", "world", "missing")
 	require.EqualValues(t, "world", KVs(err)["hello"])
 	_, ok := KVs(err)["missing"]
 	require.False(t, ok)
 }
 
 func TestUnwrap_ReturnsCause(t *testing.T) {
-	msg := "hello, world"
+	msg := t.Name()
 	err := Wrap(io.ErrUnexpectedEOF, msg)
 	assert.Equal(t, io.ErrUnexpectedEOF, Unwrap(err))
 }
 
 func TestKVError_Unwrap_ReturnsCause(t *testing.T) {
-	msg := "hello, world"
+	msg := t.Name()
 	err := Wrap(io.ErrUnexpectedEOF, msg)
 	assert.Equal(t, io.ErrUnexpectedEOF, errors.Unwrap(err))
 }
@@ -82,10 +82,10 @@ func TestAs(t *testing.T) {
 }
 
 func TestKVError_Add(t *testing.T) {
-	err := New("hello, world", "key", "value")
+	err := New(t.Name(), "key", "value")
 	err = Add(err, "key2", "value2")
 	expected := map[string]interface{}{
-		"msg":  "hello, world",
+		"msg":  t.Name(),
 		"key":  "value",
 		"key2": "value2",
 	}
@@ -114,8 +114,8 @@ func TestContext_New_WrapsAllKeysAndValues(t *testing.T) {
 	err := ctx.New("a broken mess", "baz", "foo")
 
 	expected := map[string]interface{}{
-		"msg":  "a broken mess",
-		"foo":  "bar",
+		"msg": "a broken mess",
+		"foo": "bar",
 		"baz": "foo",
 	}
 
@@ -127,8 +127,8 @@ func TestContext_Wrap_WrapsAllKeysAndValues(t *testing.T) {
 	err := ctx.Wrap(io.ErrNoProgress, "a broken mess", "baz", "foo")
 
 	expected := map[string]interface{}{
-		"msg":  "a broken mess",
-		"foo":  "bar",
+		"msg": "a broken mess",
+		"foo": "bar",
 		"baz": "foo",
 	}
 
@@ -137,7 +137,6 @@ func TestContext_Wrap_WrapsAllKeysAndValues(t *testing.T) {
 		require.EqualValues(t, v, errkvs[k])
 	}
 }
-
 
 type MyError struct {
 	Letter string

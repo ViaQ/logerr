@@ -189,6 +189,7 @@ func TestLogger_V(t *testing.T) {
 // TestLogger_V above for a more comprehensive test.
 func TestLogger_V_Integration(t *testing.T) {
 	for verbosity := uint8(1); verbosity < 5; verbosity++ {
+		verbosity := verbosity
 		testName := fmt.Sprintf("verbosity-%d", verbosity)
 		t.Run(testName, func(t *testing.T) {
 			log.MustInitWithOptions(testName, []log.Option{
