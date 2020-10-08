@@ -85,6 +85,8 @@ func UseLogger(l logr.Logger) {
 	useLogger(l)
 }
 
+// useLogger sets the logger to l without mtx.Lock()
+// To use mtx.Lock see UseLogger
 func useLogger(l logr.Logger) {
 	logger = WrapLogger(l)
 }
