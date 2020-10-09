@@ -1,6 +1,7 @@
 package log
 
 import (
+	"os"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -124,6 +125,20 @@ func WithVerbosity(level uint8) Option {
 		c.Level = zap.NewAtomicLevelAt(zapcore.Level(l))
 	}
 }
+
+// WithOutputs sets OutputPaths to std and ErrOutputPaths to err
+func WithOutputs(std, err []string) Option {
+	return func(c *zap.Config) {
+		c.OutputPaths = std
+		c.ErrorOutputPaths = err
+	}
+}
+
+// WithNoOutputs sets the outs to os.DevNull
+func WithNoOutputs() Option {
+	return WithOutputs([]string{os.DevNull}, []string{os.DevNull})
+}
+
 
 // Info logs a non-error message with the given key/value pairs as context.
 //
