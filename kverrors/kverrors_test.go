@@ -5,6 +5,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/ViaQ/logerr/internal/kv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,11 +103,10 @@ func TestKVError_Ctx(t *testing.T) {
 	errCtx := NewContext("k1", "v1", "k2", "v2")
 	err := New("failed something or other")
 	err = AddCtx(err, errCtx)
-	for k, v := range toMap(errCtx) {
+	for k, v := range kv.ToMap(errCtx) {
 		require.Contains(t, err, k)
 		require.EqualValues(t, v, KVs(err)[k])
 	}
-
 }
 
 func TestContext_New_WrapsAllKeysAndValues(t *testing.T) {
