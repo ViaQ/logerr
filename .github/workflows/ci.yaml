@@ -30,7 +30,7 @@ jobs:
         version: v1.32
 
     - name: Test
-      run: go test -v -coverprofile=.coverprofile .
+      run: go test -v -coverprofile=.coverprofile ./...
 
     - name: Report code coverage
       uses: shogo82148/actions-goveralls@v1
