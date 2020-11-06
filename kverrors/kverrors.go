@@ -8,6 +8,7 @@ import (
 	"github.com/ViaQ/logerr/internal/kv"
 )
 
+// Keys used to log specific builtin fields
 const (
 	MessageKey string = "msg"
 	CauseKey   string = "cause"
