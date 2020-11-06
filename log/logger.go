@@ -165,4 +165,3 @@ func (l *Logger) WithName(name string) logr.Logger {
 		l.context,
 	)
 }
-

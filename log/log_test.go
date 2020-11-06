@@ -191,4 +191,3 @@ func TestV(t *testing.T) {
 	require.NotEmpty(t, logs)
 	require.Equal(t, msg, logs[0].Message)
 }
-

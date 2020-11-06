@@ -1,6 +1,6 @@
 module github.com/ViaQ/logerr
 
-go 1.14
+go 1.15
 
 require (
 	github.com/go-logr/logr v0.2.1

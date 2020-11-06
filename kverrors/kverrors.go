@@ -91,7 +91,7 @@ func Message(err error) string {
 	if !errors.As(err, &kve) {
 		return err.Error()
 	}
-	msg, _ := kve.kv[MessageKey]
+	msg := kve.kv[MessageKey]
 	return fmt.Sprint(msg)
 }
 
