@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ViaQ/logerr/internal/kv"
+	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func TestInit(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 
 	log.MustInit(component)
-	log.SetOutput(buf)
+	require.NoError(t, log.SetOutput(buf))
 	ll, ok := log.GetLogger().(*log.Logger)
 	require.True(t, ok)
 
@@ -60,7 +61,7 @@ func TestUseLogger_SetsLogger(t *testing.T) {
 func TestInfo(t *testing.T) {
 	obs, logger := NewObservedLogger()
 	log.UseLogger(logger)
-	msg := "asjklhasdfhuasfu"
+	msg := t.Name()
 
 	log.Info(msg)
 
@@ -73,7 +74,7 @@ func TestError(t *testing.T) {
 	obs, logger := NewObservedLogger()
 	log.UseLogger(logger)
 
-	msg := "iou3jkhcopiuyasdf"
+	msg := t.Name()
 	err := errors.New("fail boat")
 
 	log.Error(err, msg)
@@ -88,7 +89,7 @@ func TestWithValues(t *testing.T) {
 	obs, logger := NewObservedLogger()
 	log.UseLogger(logger)
 
-	msg := "yuio3hjk4reklcyasdf"
+	msg := t.Name()
 	ctx := map[string]interface{}{
 		"left":  "right",
 		"hello": "world",
@@ -120,7 +121,7 @@ func TestSetLogLevel(t *testing.T) {
 	log.UseLogger(logger)
 
 	const logLevel = 4
-	msg := "iohu3hjk4o8iuas9df8"
+	msg := t.Name()
 
 	log.SetLogLevel(logLevel)
 	log.V(logLevel).Info(msg)
@@ -131,20 +132,30 @@ func TestSetLogLevel(t *testing.T) {
 	require.EqualValues(t, msg, logs[0].Message)
 }
 
-func TestSetOutput(t *testing.T) {
+func TestSetOutput_WithKnownLogger_SetsOutputOnLogger(t *testing.T) {
 	logger := log.NewLogger("", ioutil.Discard, 0, log.JSONEncoder{})
 	log.UseLogger(logger)
 
-	msg := "ahjklsdfhuiasdfh"
+	msg := t.Name()
 
 	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
+	require.NoError(t, log.SetOutput(buf))
 	log.Info(msg)
 
 	output := string(buf.Bytes())
 	require.NotEmpty(t, output)
 
 	require.Contains(t, output, msg)
+}
+
+func TestSetOutput_WithUnknownLogger_Errors(t *testing.T) {
+	log.UseLogger(nopLogger{})
+
+	buf := bytes.NewBuffer(nil)
+	err := log.SetOutput(buf)
+
+	actual := kverrors.Root(err)
+	require.Equal(t, log.ErrUnknownLoggerType, actual)
 }
 
 func TestWithName(t *testing.T) {
@@ -154,7 +165,7 @@ func TestWithName(t *testing.T) {
 	logger = logger.WithName("mycomponent").(*log.Logger)
 	log.UseLogger(logger)
 
-	msg := "uioy3948dc9ad"
+	msg := t.Name()
 
 	ll := log.WithName("mynameis")
 
@@ -168,4 +179,16 @@ func TestWithName(t *testing.T) {
 }
 
 func TestV(t *testing.T) {
+	obs, logger := NewObservedLogger()
+	log.UseLogger(logger)
+	log.SetLogLevel(1)
+
+	msg := t.Name()
+
+	log.V(1).Info(msg)
+
+	logs := obs.TakeAll()
+	require.NotEmpty(t, logs)
+	require.Equal(t, msg, logs[0].Message)
 }
+

@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	keyMessage string = "msg"
-	keyCause   string = "cause"
+	MessageKey string = "msg"
+	CauseKey   string = "cause"
 )
 
 // New creates a new KVError with keys and values
 func New(msg string, keysAndValues ...interface{}) error {
 	return &KVError{
 		kv: kv.AppendMap(map[string]interface{}{
-			keyMessage: msg,
+			MessageKey: msg,
 		}, kv.ToMap(keysAndValues...)),
 	}
 }
@@ -32,7 +32,7 @@ func Wrap(err error, msg string, keysAndValues ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	e := New(msg, append(keysAndValues, []interface{}{keyCause, err}...)...)
+	e := New(msg, append(keysAndValues, []interface{}{CauseKey, err}...)...)
 	return e
 }
 
@@ -67,7 +67,7 @@ func KVSlice(err error) []interface{} {
 // Unwrap returns the error that caused this error. This is required
 // to work with the standard library errors.Unwrap
 func (e *KVError) Unwrap() error {
-	if cause, ok := e.kv[keyCause]; ok {
+	if cause, ok := e.kv[CauseKey]; ok {
 		e, _ := cause.(error)
 		// if ok is false then e will be empty anyway so no need to check if ok
 		return e
@@ -91,10 +91,8 @@ func Message(err error) string {
 	if !errors.As(err, &kve) {
 		return err.Error()
 	}
-	if msg, ok := kve.kv[keyMessage]; ok {
-		return fmt.Sprint(msg)
-	}
-	return ""
+	msg, _ := kve.kv[MessageKey]
+	return fmt.Sprint(msg)
 }
 
 // Add adds key/value pairs to an error and returns the error
