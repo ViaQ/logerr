@@ -165,8 +165,3 @@ func (l *Logger) WithName(name string) logr.Logger {
 		l.context,
 	)
 }
-
-// KeysAndValues returns the keysAndValues assigned to this logger
-func (l *Logger) KeysAndValues() map[string]interface{} {
-	return l.context
-}

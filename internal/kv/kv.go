@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -36,9 +35,4 @@ func FromMap(m map[string]interface{}) []interface{} {
 		res = append(res, k, v)
 	}
 	return res
-}
-
-// ToJSON marshals keysAndValues to json
-func ToJSON(keysAndValues ...interface{}) ([]byte, error) {
-	return json.Marshal(ToMap(keysAndValues))
 }
