@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
+// Keys used to log specific builtin fields
 const (
 	ErrorKey     = "cause"
 	MessageKey   = "message"
@@ -40,6 +41,7 @@ type Logger struct {
 	name      string
 }
 
+// NewLogger creates a new logger
 func NewLogger(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues ...interface{}) *Logger {
 	return &Logger{
 		name:      name,
