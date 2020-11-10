@@ -104,7 +104,7 @@ func TestLogger_Error_nested_error(t *testing.T) {
 			log.ErrorKey: map[string]interface{}{
 				"key": "value",
 				"msg": kverrors.Message(err),
-				log.ErrorKey: map[string]interface{}{
+				kverrors.CauseKey: map[string]interface{}{
 					"order": 1,
 					"msg":   kverrors.Message(err1),
 				},

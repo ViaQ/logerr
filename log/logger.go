@@ -13,7 +13,7 @@ import (
 
 // Keys used to log specific builtin fields
 const (
-	ErrorKey     = "cause"
+	ErrorKey     = "error"
 	MessageKey   = "message"
 	TimeStampKey = "ts"
 	ComponentKey = "component"
