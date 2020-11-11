@@ -164,7 +164,7 @@ func Logging() {
         err := TrySomething() 
         log.Error(err, "failed to do something", "application", "example")
         // {
-        //  "v": 0, <- this is verbosity
+        //  "level": 0, <- this is verbosity
         //  "ts": "<timestamp>",
         //  "msg": "failed to do something",
         //  "application": "example"
@@ -178,7 +178,7 @@ func Logging() {
         err = TrySomethingElse() 
         log.Error(err, "failed to do something", "application", "example")
         // {
-        //  "v": 0, <- this is verbosity
+        //  "level": 0, <- this is verbosity
         //  "ts": "<timestamp>",
         //  "msg": "failed to do something",
         //  "application": "example"

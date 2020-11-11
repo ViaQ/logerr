@@ -20,13 +20,13 @@ func TestLogger_Info_WithKeysAndValues(t *testing.T) {
 
 	logger.Info("hello, world", "city", "Athens")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			"city": "Athens",
 		},
 	)
@@ -38,7 +38,7 @@ func TestLogger_Error_noKeysAndValues(t *testing.T) {
 	err := kverrors.New("an error")
 	logger.Error(err, "hello, world")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	require.Len(t, logs, 1)
 	require.EqualValues(t, "hello, world", logs[0].Message)
 
@@ -51,13 +51,13 @@ func TestLogger_Error_KeysAndValues(t *testing.T) {
 	err := kverrors.New("an error")
 	logger.Error(err, "hello, world", "key", "value")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	require.Len(t, logs, 1)
 	require.EqualValues(t, "hello, world", logs[0].Message)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			"key": "value",
 		},
 	)
@@ -69,7 +69,7 @@ func TestLogger_Error_pkg_error_KeysAndValues(t *testing.T) {
 	err := kverrors.New("an error", "key", "value")
 	logger.Error(err, "hello, world")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
 
@@ -77,7 +77,7 @@ func TestLogger_Error_pkg_error_KeysAndValues(t *testing.T) {
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			log.MessageKey: "hello, world",
 			log.ErrorKey: map[string]interface{}{
 				"msg": "an error",
@@ -94,13 +94,13 @@ func TestLogger_Error_nested_error(t *testing.T) {
 	err := kverrors.Wrap(err1, "main error", "key", "value")
 	logger.Error(err, "hello, world")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			log.ErrorKey: map[string]interface{}{
 				"key": "value",
 				"msg": kverrors.Message(err),
@@ -119,13 +119,13 @@ func TestLogger__PlainErrors_ConvertedToStructured(t *testing.T) {
 	err := io.ErrClosedPipe
 	logger.Error(err, "hello, world")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			log.ErrorKey: map[string]interface{}{
 				"msg": err.Error(),
 			},
@@ -141,13 +141,13 @@ func TestLogger_WithValues_AddsValues(t *testing.T) {
 
 	ll.Error(err, "hello, world")
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			"key": "value",
 		},
 	)
@@ -158,12 +158,12 @@ func TestLogger_Error_MakesUnstructuredErrorsStructured(t *testing.T) {
 
 	logger.Error(io.ErrClosedPipe, t.Name())
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 
 	assertLoggedFields(t,
 		logs[0],
-		map[string]interface{}{
+		Fields{
 			log.ErrorKey: map[string]interface{}{
 				"msg": io.ErrClosedPipe.Error(),
 			},
@@ -176,7 +176,7 @@ func TestLogger_Error_WorksWithNilError(t *testing.T) {
 
 	logger.Error(nil, t.Name())
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.Nil(t, logs[0].Error)
 }
@@ -192,7 +192,7 @@ func TestLogger_V_Info(t *testing.T) {
 
 			logger.V(logLevel).Info("hello, world")
 
-			logs := obs.entries
+			logs := obs.TakeAll()
 
 			shouldBeLogged := verbosity >= logLevel
 
@@ -217,7 +217,7 @@ func TestLogger_V_Error(t *testing.T) {
 
 			logger.V(logLevel).Error(io.ErrUnexpectedEOF, "hello, world")
 
-			logs := obs.entries
+			logs := obs.TakeAll()
 
 			shouldBeLogged := verbosity >= logLevel
 
@@ -236,9 +236,9 @@ func TestLogger_SetsVerbosity(t *testing.T) {
 
 	logger.Info(t.Name())
 
-	logs := obs.entries
+	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
-	assert.Equal(t, 0, logs[0].Verbosity)
+	assert.EqualValues(t, 0, logs[0].Verbosity)
 }
 
 func TestLogger_TestSetOutput(t *testing.T) {
@@ -280,4 +280,24 @@ func TestLogger_Info_PrintsError_WhenEncoderErrors(t *testing.T) {
 	assert.Contains(t, output, msg, "has the original message")
 	assert.Contains(t, output, err.Error(), "shows the original error")
 	assert.Contains(t, output, reflect.TypeOf(fenc).String(), "explains the encoder that failed")
+}
+
+func TestLogger_LogsLevel(t *testing.T) {
+	const v = 2
+
+	obs, logger := NewObservedLogger()
+	log.SetLogLevel(v)
+
+	logger.V(v).Info("hello, world", "city", "Athens")
+
+	logs := obs.TakeAll()
+	assert.Len(t, logs, 1)
+	assert.EqualValues(t, "hello, world", logs[0].Message)
+
+	assertLoggedFields(t,
+		logs[0],
+		Fields{
+			log.LevelKey: v,
+		},
+	)
 }
