@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 	"time"
 
@@ -23,6 +24,14 @@ const (
 // Verbosity is a level of verbosity to log between 0 and math.MaxInt32
 // However it is recommended to keep the numbers between 0 and 3
 type Verbosity int
+
+func (v Verbosity) String() string {
+	return strconv.Itoa(int(v))
+}
+
+func (v Verbosity) MarshalJSON() ([]byte, error) {
+	return []byte(v.String()), nil
+}
 
 // TimestampFunc returns a string formatted version of the current time.
 // This should probably only be used with tests or if you want to change
@@ -88,7 +97,7 @@ func (l *Logger) log(msg string, context map[string]interface{}) {
 		MessageKey:   msg,
 		TimeStampKey: TimestampFunc(),
 		ComponentKey: l.name,
-		LevelKey:     l.verbosity,
+		LevelKey:     l.verbosity.String(),
 	})
 	err := l.encoder.Encode(l.output, m)
 	if err != nil {

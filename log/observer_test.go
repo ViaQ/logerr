@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/ViaQ/logerr/internal/kv"
+	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/require"
 )
@@ -113,20 +115,45 @@ func (o *observableEncoder) Reset() {
 // parseEntry parses all known fields into the observedEntry struct and places
 // everything else in the Context field
 func parseEntry(m map[string]interface{}) *observedEntry {
-	msg := m[log.MessageKey].(string)
+	msg, ok := m[log.MessageKey].(string)
 	delete(m, log.MessageKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.MessageKey), "failed to parse message key from message")
+	}
 
-	ts := m[log.TimeStampKey].(string)
+	ts, ok := m[log.TimeStampKey].(string)
 	delete(m, log.TimeStampKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.TimeStampKey), "failed to parse timestamp from message")
+	}
 
-	err, _ := m[log.ErrorKey].(error)
+	var err error = nil
+	erri, ok := m[log.ErrorKey]
+	if ok {
+		if err, ok = erri.(error); !ok {
+			log.Error(kverrors.New("malformed/missing key", "key", log.ErrorKey), "failed to parse error from message")
+		}
+	}
+
 	delete(m, log.ErrorKey)
 
-	component, _ := m[log.ComponentKey].(string)
+	component, ok := m[log.ComponentKey].(string)
 	delete(m, log.ComponentKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.ComponentKey), "failed to parse component from message")
+	}
 
-	verbosity, _ := m[log.LevelKey].(log.Verbosity)
+	verbosityStr, ok := m[log.LevelKey].(string)
 	delete(m, log.LevelKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.LevelKey), "failed to parse level from message")
+	}
+
+	verbosity, err := strconv.Atoi(verbosityStr)
+	if err != nil {
+		log.Error(err, "failed to parse string as verbosity")
+	}
+
 
 	return &observedEntry{
 		Component: component,
@@ -134,7 +161,7 @@ func parseEntry(m map[string]interface{}) *observedEntry {
 		Timestamp: ts,
 		Context:   m,
 		Error:     err,
-		Verbosity: verbosity,
+		Verbosity: log.Verbosity(verbosity),
 	}
 }
 
