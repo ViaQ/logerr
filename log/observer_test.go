@@ -13,8 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type Fields map[string]interface{}
+
 // assertLoggedFields checks that all of fields exists in the entry.
-func assertLoggedFields(t *testing.T, entry *observedEntry, fields map[string]interface{}) {
+func assertLoggedFields(t *testing.T, entry *observedEntry, fields Fields) {
 	var f []string
 	for k := range fields {
 		f = append(f, k)
@@ -29,7 +31,7 @@ func assertLoggedFields(t *testing.T, entry *observedEntry, fields map[string]in
 		require.NoError(t, e)
 		expected, e := json.Marshal(v)
 		require.NoError(t, e)
-		require.JSONEq(t, string(expected), string(actual))
+		require.JSONEq(t, string(expected), string(actual), "key: %q", k)
 	}
 }
 
@@ -39,15 +41,15 @@ type observedEntry struct {
 	Timestamp string
 	Context   map[string]interface{}
 	Error     error
-	Verbosity int
+	Verbosity log.Verbosity
 }
 
 // Fields filters the entry to the specified fields and returns the result as a map.
 // This will include all known/parsed fields (such as Message, Timestamp) as well as
 // all Context items.
-func (o *observedEntry) Fields(fields ...string) map[string]interface{} {
+func (o *observedEntry) Fields(fields ...string) Fields {
 	entry := o.ToMap()
-	filtered := map[string]interface{}{}
+	filtered := Fields{}
 
 	for _, f := range fields {
 		filtered[f] = entry[f]
@@ -69,7 +71,7 @@ func (o *observedEntry) ToMap() map[string]interface{} {
 		log.MessageKey:   o.Message,
 		log.TimeStampKey: o.Timestamp,
 		log.ComponentKey: o.Component,
-		log.VerbosityKey: o.Verbosity,
+		log.LevelKey:     o.Verbosity,
 	})
 }
 
@@ -123,8 +125,8 @@ func parseEntry(m map[string]interface{}) *observedEntry {
 	component, _ := m[log.ComponentKey].(string)
 	delete(m, log.ComponentKey)
 
-	verbosity, _ := m[log.VerbosityKey].(int)
-	delete(m, log.VerbosityKey)
+	verbosity, _ := m[log.LevelKey].(log.Verbosity)
+	delete(m, log.LevelKey)
 
 	return &observedEntry{
 		Component: component,

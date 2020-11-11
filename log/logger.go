@@ -17,7 +17,7 @@ const (
 	MessageKey   = "message"
 	TimeStampKey = "ts"
 	ComponentKey = "component"
-	VerbosityKey = "v"
+	LevelKey     = "level"
 )
 
 // Verbosity is a level of verbosity to log between 0 and math.MaxInt32
@@ -88,7 +88,7 @@ func (l *Logger) log(msg string, context map[string]interface{}) {
 		MessageKey:   msg,
 		TimeStampKey: TimestampFunc(),
 		ComponentKey: l.name,
-		// VerbosityKey: l.verbosity,
+		LevelKey:     l.verbosity,
 	})
 	err := l.encoder.Encode(l.output, m)
 	if err != nil {
