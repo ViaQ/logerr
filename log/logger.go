@@ -118,7 +118,7 @@ func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
 	if !l.Enabled() {
 		return
 	}
-	l.log(msg, kv.AppendMap(l.context, kv.ToMap(keysAndValues...)))
+	l.log(msg, kv.ToMap(keysAndValues...))
 }
 
 // Error logs an error, with the given message and key/value pairs as context.
