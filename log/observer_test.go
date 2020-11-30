@@ -3,8 +3,10 @@ package log_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -115,29 +117,29 @@ func (o *observableEncoder) Reset() {
 // parseEntry parses all known fields into the observedEntry struct and places
 // everything else in the Context field
 func parseEntry(m map[string]interface{}) *observedEntry {
-	msg, ok := m[log.MessageKey].(string)
+	result := &observedEntry{}
+	var ok bool
+
+	result.Message, ok = m[log.MessageKey].(string)
 	delete(m, log.MessageKey)
 	if !ok {
 		log.Error(kverrors.New("malformed/missing key", "key", log.MessageKey), "failed to parse message key from message")
 	}
 
-	ts, ok := m[log.TimeStampKey].(string)
+	result.Timestamp, ok = m[log.TimeStampKey].(string)
 	delete(m, log.TimeStampKey)
 	if !ok {
 		log.Error(kverrors.New("malformed/missing key", "key", log.TimeStampKey), "failed to parse timestamp from message")
 	}
 
-	var err error = nil
-	erri, ok := m[log.ErrorKey]
-	if ok {
-		if err, ok = erri.(error); !ok {
-			log.Error(kverrors.New("malformed/missing key", "key", log.ErrorKey), "failed to parse error from message")
+	if erri, ok := m[log.ErrorKey]; ok {
+		if result.Error, ok = erri.(error); !ok {
+			fmt.Fprintf(os.Stderr, "failed to parse error from message: %v\n", kverrors.New("malformed/missing key", "key", log.ErrorKey))
 		}
 	}
-
 	delete(m, log.ErrorKey)
 
-	component, ok := m[log.ComponentKey].(string)
+	result.Component, ok = m[log.ComponentKey].(string)
 	delete(m, log.ComponentKey)
 	if !ok {
 		log.Error(kverrors.New("malformed/missing key", "key", log.ComponentKey), "failed to parse component from message")
@@ -152,17 +154,14 @@ func parseEntry(m map[string]interface{}) *observedEntry {
 	verbosity, err := strconv.Atoi(verbosityStr)
 	if err != nil {
 		log.Error(err, "failed to parse string as verbosity")
+	} else {
+		result.Verbosity = log.Verbosity(verbosity)
 	}
 
 
-	return &observedEntry{
-		Component: component,
-		Message:   msg,
-		Timestamp: ts,
-		Context:   m,
-		Error:     err,
-		Verbosity: log.Verbosity(verbosity),
-	}
+	// set the remaining items to Context
+	result.Context = m
+	return result
 }
 
 // NewObservedLogger creates a new observableEncoder and a logger that uses the encoder.
