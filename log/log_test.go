@@ -82,6 +82,7 @@ func TestError(t *testing.T) {
 	logs := obs.Logs()
 	require.Len(t, logs, 1)
 	require.EqualValues(t, msg, logs[0].Message)
+	require.NotNil(t, logs[0].Error)
 	require.EqualValues(t, err.Error(), logs[0].Error.Error())
 }
 

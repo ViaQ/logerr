@@ -29,6 +29,7 @@ func (v Verbosity) String() string {
 	return strconv.Itoa(int(v))
 }
 
+// MarshalJSON marshals JSON
 func (v Verbosity) MarshalJSON() ([]byte, error) {
 	return []byte(v.String()), nil
 }
