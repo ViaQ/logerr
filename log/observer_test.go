@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ViaQ/logerr/internal/kv"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/require"
@@ -70,13 +69,16 @@ func (o *observedEntry) RawFields(fields ...string) ([]byte, error) {
 }
 
 func (o *observedEntry) ToMap() map[string]interface{} {
-	return kv.AppendMap(o.Context, map[string]interface{}{
-		log.ErrorKey:     o.Error,
-		log.MessageKey:   o.Message,
-		log.TimeStampKey: o.Timestamp,
-		log.ComponentKey: o.Component,
-		log.LevelKey:     o.Verbosity,
-	})
+	m := make(map[string]interface{}, len(o.Context))
+	for k, v := range o.Context {
+		m[k] = v
+	}
+	m[log.ErrorKey] = o.Error
+	m[log.MessageKey] = o.Message
+	m[log.TimeStampKey] = o.Timestamp
+	m[log.ComponentKey] = o.Component
+	m[log.LevelKey] = o.Verbosity
+	return m
 }
 
 func (o *observedEntry) Raw() ([]byte, error) {
@@ -116,7 +118,12 @@ func (o *observableEncoder) Reset() {
 
 // parseEntry parses all known fields into the observedEntry struct and places
 // everything else in the Context field
-func parseEntry(m map[string]interface{}) *observedEntry {
+func parseEntry(entryMap map[string]interface{}) *observedEntry {
+	// Make a copy, don't alter the argument as a side effect.
+	m := make(map[string]interface{}, len(entryMap))
+	for k, v := range entryMap {
+		m[k] = v
+	}
 	result := &observedEntry{}
 	var ok bool
 
@@ -157,7 +164,6 @@ func parseEntry(m map[string]interface{}) *observedEntry {
 	} else {
 		result.Verbosity = log.Verbosity(verbosity)
 	}
-
 
 	// set the remaining items to Context
 	result.Context = m

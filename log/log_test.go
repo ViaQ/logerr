@@ -91,29 +91,24 @@ func TestWithValues(t *testing.T) {
 	log.UseLogger(logger)
 
 	msg := t.Name()
-	ctx := map[string]interface{}{
-		"left":  "right",
-		"hello": "world",
-	}
-
-	ll := log.WithValues(kv.FromMap(ctx)...)
-
-	assertions := func(t *testing.T) {
-		logs := obs.TakeAll()
-		if assert.Len(t, logs, 1) {
-			assert.EqualValues(t, msg, logs[0].Message)
-			assert.EqualValues(t, ctx, logs[0].Context)
-		}
-	}
+	ll := log.WithValues("hello", "world")
 
 	t.Run("Error", func(t *testing.T) {
 		ll.Error(errors.New("fail boat"), msg)
-		assertions(t)
+		logs := obs.TakeAll()
+		require.Len(t, logs, 1)
+		assert.EqualValues(t, msg, logs[0].Message)
+		assert.EqualValues(t, kv.ToMap("hello", "world"), logs[0].Context)
 	})
 
 	t.Run("Info", func(t *testing.T) {
-		ll.Info(msg, kv.FromMap(ctx)...)
-		assertions(t)
+		ll.Info(msg, "a", "b")
+		ll.Info(msg, "c", "d")
+		logs := obs.TakeAll()
+		require.Len(t, logs, 2)
+		assert.EqualValues(t, msg, logs[0].Message)
+		assert.EqualValues(t, kv.ToMap("a", "b", "hello", "world"), logs[0].Context)
+		assert.EqualValues(t, kv.ToMap("c", "d", "hello", "world"), logs[1].Context)
 	})
 }
 
