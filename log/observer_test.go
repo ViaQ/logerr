@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/require"
+	"github.com/ViaQ/logerr/kverrors"
 )
 
 type Fields map[string]interface{}
@@ -45,8 +45,7 @@ type observedEntry struct {
 	Context   map[string]interface{}
 	Error     error
 	Verbosity log.Verbosity
-	File      string
-	Line      string
+	FileLine  string
 }
 
 // Fields filters the entry to the specified fields and returns the result as a map.
@@ -80,8 +79,7 @@ func (o *observedEntry) ToMap() map[string]interface{} {
 	m[log.TimeStampKey] = o.Timestamp
 	m[log.ComponentKey] = o.Component
 	m[log.LevelKey] = o.Verbosity
-	m[log.FileKey] = o.File
-	m[log.LineKey] = o.Line
+	m[log.FileLineKey] = o.FileLine
 	return m
 }
 
@@ -99,7 +97,7 @@ type observableEncoder struct {
 }
 
 // Encode stores all entries in a buffer rather than encoding them to an output
-func (o *observableEncoder) Encode(_ io.Writer, m map[string]interface{}) error {
+func (o *observableEncoder) Encode(_ io.Writer, m interface{}) error {
 	o.entries = append(o.entries, parseEntry(m))
 	return nil
 }
@@ -122,67 +120,32 @@ func (o *observableEncoder) Reset() {
 
 // parseEntry parses all known fields into the observedEntry struct and places
 // everything else in the Context field
-func parseEntry(entryMap map[string]interface{}) *observedEntry {
+func parseEntry(entry interface{}) *observedEntry {
 	// Make a copy, don't alter the argument as a side effect.
-	m := make(map[string]interface{}, len(entryMap))
-	for k, v := range entryMap {
-		m[k] = v
-	}
-	result := &observedEntry{}
-	var ok bool
-
-	result.File, ok = m[log.FileKey].(string)
-	delete(m, log.FileKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.FileKey), "failed to parse file key from message")
+	m := entry.(log.Line)
+	verbosity, err := strconv.Atoi(m.Verbosity)
+	if err != nil {
+		log.Error(err, "failed to parse string as verbosity")
 	}
 
-	result.Message, ok = m[log.LineKey].(string)
-	delete(m, log.LineKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.LineKey), "failed to parse line key from message")
-	}
-
-	result.Message, ok = m[log.MessageKey].(string)
-	delete(m, log.MessageKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.MessageKey), "failed to parse message key from message")
-	}
-
-	result.Timestamp, ok = m[log.TimeStampKey].(string)
-	delete(m, log.TimeStampKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.TimeStampKey), "failed to parse timestamp from message")
-	}
-
-	if erri, ok := m[log.ErrorKey]; ok {
-		if result.Error, ok = erri.(error); !ok {
+	var resultErr error= nil
+	if errVal, ok := m.Context[log.ErrorKey]; ok {
+		if resultErr, ok = errVal.(error); !ok {
 			fmt.Fprintf(os.Stderr, "failed to parse error from message: %v\n", kverrors.New("malformed/missing key", "key", log.ErrorKey))
 		}
 	}
-	delete(m, log.ErrorKey)
+	delete(m.Context, log.ErrorKey)
 
-	result.Component, ok = m[log.ComponentKey].(string)
-	delete(m, log.ComponentKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.ComponentKey), "failed to parse component from message")
+	result := &observedEntry{
+		Timestamp: m.Timestamp,
+		FileLine: m.FileLine,
+		Verbosity: log.Verbosity(verbosity),
+		Component: m.Component,
+		Message: m.Message,
+		Context: m.Context,
+		Error: resultErr,
 	}
 
-	verbosityStr, ok := m[log.LevelKey].(string)
-	delete(m, log.LevelKey)
-	if !ok {
-		log.Error(kverrors.New("malformed/missing key", "key", log.LevelKey), "failed to parse level from message")
-	}
-
-	verbosity, err := strconv.Atoi(verbosityStr)
-	if err != nil {
-		log.Error(err, "failed to parse string as verbosity")
-	} else {
-		result.Verbosity = log.Verbosity(verbosity)
-	}
-
-	// set the remaining items to Context
-	result.Context = m
 	return result
 }
 
