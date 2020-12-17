@@ -45,6 +45,8 @@ type observedEntry struct {
 	Context   map[string]interface{}
 	Error     error
 	Verbosity log.Verbosity
+	File      string
+	Line      string
 }
 
 // Fields filters the entry to the specified fields and returns the result as a map.
@@ -78,6 +80,8 @@ func (o *observedEntry) ToMap() map[string]interface{} {
 	m[log.TimeStampKey] = o.Timestamp
 	m[log.ComponentKey] = o.Component
 	m[log.LevelKey] = o.Verbosity
+	m[log.FileKey] = o.File
+	m[log.LineKey] = o.Line
 	return m
 }
 
@@ -126,6 +130,18 @@ func parseEntry(entryMap map[string]interface{}) *observedEntry {
 	}
 	result := &observedEntry{}
 	var ok bool
+
+	result.File, ok = m[log.FileKey].(string)
+	delete(m, log.FileKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.FileKey), "failed to parse file key from message")
+	}
+
+	result.Message, ok = m[log.LineKey].(string)
+	delete(m, log.LineKey)
+	if !ok {
+		log.Error(kverrors.New("malformed/missing key", "key", log.LineKey), "failed to parse line key from message")
+	}
 
 	result.Message, ok = m[log.MessageKey].(string)
 	delete(m, log.MessageKey)

@@ -3,6 +3,8 @@ package log
 import (
 	"fmt"
 	"io"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -19,6 +21,8 @@ const (
 	TimeStampKey = "ts"
 	ComponentKey = "component"
 	LevelKey     = "level"
+	FileKey      = "file"
+	LineKey      = "line"
 )
 
 // Verbosity is a level of verbosity to log between 0 and math.MaxInt32
@@ -77,6 +81,7 @@ func combine(context map[string]interface{}, keysAndValues ...interface{}) map[s
 			nc[key] = keysAndValues[i+1]
 		}
 	}
+
 	return nc
 }
 
@@ -112,11 +117,16 @@ func (l *Logger) Enabled() bool {
 // log will log the message. It DOES NOT check Enabled() first so that should
 // be checked by it's callers
 func (l *Logger) log(msg string, context map[string]interface{}) {
+	_, file, line, _ := runtime.Caller(3)
+	file = filepath.Base(filepath.Dir(file)) + "/" + filepath.Base(file)
+
 	m := combine(context,
 		MessageKey, msg,
 		TimeStampKey, TimestampFunc(),
 		ComponentKey, l.name,
-		LevelKey, l.verbosity.String())
+		LevelKey, l.verbosity.String(),
+		FileKey, file,
+		LineKey, strconv.Itoa(line))
 	err := l.encoder.Encode(l.output, m)
 	if err != nil {
 		// expand first so we can quote later
@@ -180,14 +190,14 @@ func (l *Logger) V(v int) logr.Logger {
 // that name segments contain only letters, digits, and hyphens
 // (see the package documentation for more information).
 func (l *Logger) WithName(name string) logr.Logger {
-	newname := name
+	newName := name
 
 	if l.name != "" {
-		newname = fmt.Sprintf("%s_%s", l.name, name)
+		newName = fmt.Sprintf("%s_%s", l.name, name)
 	}
 
 	return NewLogger(
-		newname,
+		newName,
 		l.output,
 		l.verbosity,
 		l.encoder,
