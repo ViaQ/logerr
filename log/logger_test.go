@@ -41,7 +41,6 @@ func TestLogger_Error_noKeysAndValues(t *testing.T) {
 	logs := obs.TakeAll()
 	require.Len(t, logs, 1)
 	require.EqualValues(t, "hello, world", logs[0].Message)
-
 	require.EqualValues(t, err, logs[0].Error)
 }
 
@@ -72,7 +71,6 @@ func TestLogger_Error_pkg_error_KeysAndValues(t *testing.T) {
 	logs := obs.TakeAll()
 	assert.Len(t, logs, 1)
 	assert.EqualValues(t, "hello, world", logs[0].Message)
-
 	require.EqualValues(t, err, logs[0].Error)
 
 	assertLoggedFields(t,
@@ -258,7 +256,7 @@ func TestLogger_TestSetOutput(t *testing.T) {
 func TestLogger_Info_PrintsError_WhenEncoderErrors(t *testing.T) {
 	err := io.ErrShortBuffer
 	fenc := fakeEncoder{
-		EncodeFunc: func(_ io.Writer, _ map[string]interface{}) error {
+		EncodeFunc: func(_ io.Writer, _ interface{}) error {
 			return &json.MarshalerError{
 				Type: reflect.TypeOf(&json.MarshalerError{}),
 				Err:  err,
@@ -300,4 +298,49 @@ func TestLogger_LogsLevel(t *testing.T) {
 			log.LevelKey: v,
 		},
 	)
+}
+
+func TestLogger_ProductionLogsLevel(t *testing.T) {
+	const v = 0
+
+	buf := bytes.NewBuffer(nil)
+	logger := log.NewLogger("", ioutil.Discard, v, log.JSONEncoder{})
+	logger.SetOutput(buf)
+
+	msg := "hello, world"
+	logger.Info(msg)
+
+	if buf.Len() == 0 {
+		t.Fatal("expected log output, but buffer was empty")
+	}
+	assert.Contains(t, string(buf.Bytes()), fmt.Sprintf(`%q:%q`, log.MessageKey, msg))
+	assert.NotContains(t, string(buf.Bytes()), fmt.Sprintf(`%q`, log.FileLineKey))
+}
+
+func TestLogger_DeveloperLogsLevel(t *testing.T) {
+	const v = 2
+
+	buf := bytes.NewBuffer(nil)
+	logger := log.NewLogger("", ioutil.Discard, v, log.JSONEncoder{})
+	logger.SetOutput(buf)
+
+	msg := "hello, world"
+	logger.Info(msg)
+
+	if buf.Len() == 0 {
+		t.Fatal("expected log output, but buffer was empty")
+	}
+	assert.Contains(t, string(buf.Bytes()), fmt.Sprintf(`%q:%q`, log.MessageKey, msg))
+	assert.Contains(t, string(buf.Bytes()), fmt.Sprintf(`%q`, log.FileLineKey))
+}
+
+func TestLogger_LogLineWithNoContext(t *testing.T) {
+	msg := "hello, world"
+	l := log.Line{
+		Message: msg,
+	}
+
+	buf,err := l.MarshalJSON()
+	assert.Nil(t, err)
+	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey,msg))
 }

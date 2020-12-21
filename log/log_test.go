@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ViaQ/logerr/internal/kv"
+
 	"io/ioutil"
 	"testing"
 
-	"github.com/ViaQ/logerr/internal/kv"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/assert"
