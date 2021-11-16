@@ -1,2 +1,4 @@
 .coverprofile
 /bin
+# GoLand
+.idea

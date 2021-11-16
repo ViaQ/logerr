@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"reflect"
 	"testing"
 
@@ -42,6 +43,42 @@ func TestLogger_Error_noKeysAndValues(t *testing.T) {
 	require.Len(t, logs, 1)
 	require.EqualValues(t, "hello, world", logs[0].Message)
 	require.EqualValues(t, err, logs[0].Error)
+}
+
+var unsupportedValues = []float64{
+	math.NaN(),
+	math.Inf(-1),
+	math.Inf(1),
+}
+
+func TestLogger_Info_UnsupportedValues(t *testing.T) {
+	for _, unsupportedValue := range unsupportedValues {
+		buf := bytes.NewBuffer(nil)
+		logger := log.NewLogger("", buf, 0, log.JSONEncoder{})
+		logger.Info("Test unsupported value", "value", unsupportedValue)
+
+		if buf.Len() == 0 {
+			t.Fatal("expected log output, but buffer was empty")
+		}
+		assert.Contains(t, string(buf.Bytes()), "failed to encode message")
+		assert.Contains(t, string(buf.Bytes()), fmt.Sprintf("json: unsupported value: %f", unsupportedValue))
+	}
+}
+
+func TestLogger_Error_UnsupportedValues(t *testing.T) {
+	for _, unsupportedValue := range unsupportedValues {
+		buf := bytes.NewBuffer(nil)
+		logger := log.NewLogger("", buf, 0, log.JSONEncoder{})
+		err := kverrors.New("an error")
+		logger.Error(err, "Test unsupported value", "key", unsupportedValue)
+
+		if buf.Len() == 0 {
+			t.Fatal("expected log output, but buffer was empty")
+		}
+		println(string(buf.Bytes()))
+		assert.Contains(t, string(buf.Bytes()), "failed to encode message")
+		assert.Contains(t, string(buf.Bytes()), fmt.Sprintf("json: unsupported value: %f", unsupportedValue))
+	}
 }
 
 func TestLogger_Error_KeysAndValues(t *testing.T) {
