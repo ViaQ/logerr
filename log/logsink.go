@@ -108,8 +108,8 @@ var TimestampFunc = func() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
-// Logger writes logs to a specified output
-type Logger struct {
+// LogSink writes logs to a specified output
+type LogSink struct {
 	mtx       sync.RWMutex
 	verbosity Verbosity
 	output    io.Writer
@@ -118,14 +118,127 @@ type Logger struct {
 	name      string
 }
 
-// NewLogger creates a new logger
-func NewLogger(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues ...interface{}) *Logger {
-	return &Logger{
+// NewLogSink creates a new logsink
+func NewLogSink(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues ...interface{}) *LogSink {
+	return &LogSink{
 		name:      name,
 		verbosity: v,
 		output:    w,
 		context:   kv.ToMap(keysAndValues...),
 		encoder:   e,
+	}
+}
+
+// Init receives optional information about the logr library for LogSink
+// implementations that need it.
+func (ls *LogSink) Init(info logr.RuntimeInfo) {}
+
+// Enabled tests whether this logsink is enabled.  For example, commandline
+// flags might be used to set the logging verbosity and disable some info
+// logs.
+func (ls *LogSink) Enabled(level int) bool {
+	ls.mtx.RLock()
+	defer ls.mtx.RUnlock()
+	return ls.verbosity <= Verbosity(level)
+}
+
+// Info logs a non-error message with the given key/value pairs as context.
+//
+// The msg argument should be used to add some constant description to
+// the log line.  The key/value pairs can then be used to add additional
+// variable information.  The key/value pairs should alternate string
+// keys and arbitrary values.
+func (ls *LogSink) Info(level int, msg string, keysAndValues ...interface{}) {
+	if !ls.Enabled(level) {
+		return
+	}
+	ls.log(msg, combine(ls.context, keysAndValues...))
+}
+
+// Error logs an error, with the given message and key/value pairs as context.
+// It functions similarly to calling Info with the "error" named value, but may
+// have unique behavior, and should be preferred for logging errors (see the
+// package documentations for more information).
+//
+// The msg field should be used to add context to any underlying error,
+// while the err field should be used to attach the actual error that
+// triggered this log line, if present.
+func (ls *LogSink) Error(err error, msg string, keysAndValues ...interface{}) {
+	if err == nil {
+		ls.Info(int(ls.verbosity), msg, keysAndValues)
+		return
+	}
+
+	switch err.(type) {
+	case *kverrors.KVError:
+		// nothing to be done
+	default:
+		err = kverrors.New(err.Error())
+	}
+
+	ls.Info(int(ls.verbosity), msg, append(keysAndValues, ErrorKey, err)...)
+}
+
+// WithValues clones the logsink and appends keysAndValues
+func (ls *LogSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
+	return ls.withValues(keysAndValues...)
+}
+
+// WithName adds a new element to the logsink's name.
+// Successive calls with WithName continue to append
+// suffixes to the logsink's name.  It's strongly recommended
+// that name segments contain only letters, digits, and hyphens
+// (see the package documentation for more information).
+func (ls *LogSink) WithName(name string) logr.LogSink {
+	newName := name
+	if ls.name != "" {
+		newName = fmt.Sprintf("%s_%s", ls.name, name)
+	}
+
+	return NewLogSink(newName, ls.output, ls.verbosity, ls.encoder, ls.context)
+}
+
+// SetOutput sets the writer that JSON is written to
+func (ls *LogSink) SetOutput(w io.Writer) {
+	ls.mtx.Lock()
+	defer ls.mtx.Unlock()
+	ls.output = w
+}
+
+// SetVerbosity sets the log level allowed by the logsink
+func (ls *LogSink) SetVerbosity(v int) {
+	ls.mtx.Lock()
+	defer ls.mtx.Unlock()
+	ls.verbosity = Verbosity(v)
+}
+
+// withValues clones the logger and appends keysAndValues
+// but returns a struct instead of the logr.Logger interface
+func (ls *LogSink) withValues(keysAndValues ...interface{}) *LogSink {
+	ll := NewLogSink(ls.name, ls.output, ls.verbosity, ls.encoder)
+	ll.context = combine(ls.context, keysAndValues...)
+	return ll
+}
+
+// log will log the message. It DOES NOT check Enabled() first so that should
+// be checked by it's callers
+func (ls *LogSink) log(msg string, context map[string]interface{}) {
+	_, file, line, _ := runtime.Caller(3)
+	file = sourcePath(file)
+	m := Line{
+		Timestamp: TimestampFunc(),
+		FileLine:  fmt.Sprintf("%s:%s", file, strconv.Itoa(line)),
+		Verbosity: ls.verbosity.String(),
+		Component: ls.name,
+		Message:   msg,
+		Context:   context,
+	}
+
+	err := ls.encoder.Encode(ls.output, m)
+	if err != nil {
+		// expand first so we can quote later
+		orig := fmt.Sprintf("%#v", m)
+		_, _ = fmt.Fprintf(ls.output, `{"message","failed to encode message", "encoder":"%T","log":%q,"cause":%q}`, ls.encoder, orig, err)
 	}
 }
 
@@ -148,35 +261,6 @@ func combine(context map[string]interface{}, keysAndValues ...interface{}) map[s
 	return nc
 }
 
-// withValues clones the logger and appends keysAndValues
-// but returns a struct instead of the logr.Logger interface
-func (l *Logger) withValues(keysAndValues ...interface{}) *Logger {
-	ll := NewLogger(l.name, l.output, l.verbosity, l.encoder)
-	ll.context = combine(l.context, keysAndValues...)
-	return ll
-}
-
-// WithValues clones the logger and appends keysAndValues
-func (l *Logger) WithValues(keysAndValues ...interface{}) logr.Logger {
-	return l.withValues(keysAndValues...)
-}
-
-// SetOutput sets the writer that JSON is written to
-func (l *Logger) SetOutput(w io.Writer) {
-	l.mtx.Lock()
-	defer l.mtx.Unlock()
-	l.output = w
-}
-
-// Enabled tests whether this Logger is enabled.  For example, commandline
-// flags might be used to set the logging verbosity and disable some info
-// logs.
-func (l *Logger) Enabled() bool {
-	l.mtx.RLock()
-	defer l.mtx.RUnlock()
-	return l.verbosity <= Verbosity(logLevel)
-}
-
 func sourcePath(file string) string {
 	if wd, err := os.Getwd(); err == nil {
 		if rel, err := filepath.Rel(wd, file); err == nil && !strings.HasPrefix(rel, "../") {
@@ -184,96 +268,4 @@ func sourcePath(file string) string {
 		}
 	}
 	return filepath.Join(filepath.Base(filepath.Dir(file)), filepath.Base(file))
-}
-
-// log will log the message. It DOES NOT check Enabled() first so that should
-// be checked by it's callers
-func (l *Logger) log(msg string, context map[string]interface{}) {
-	_, file, line, _ := runtime.Caller(3)
-	file = sourcePath(file)
-	m := Line{
-		Timestamp: TimestampFunc(),
-		FileLine:  fmt.Sprintf("%s:%s", file, strconv.Itoa(line)),
-		Verbosity: l.verbosity.String(),
-		Component: l.name,
-		Message:   msg,
-		Context:   context,
-	}
-
-	err := l.encoder.Encode(l.output, m)
-	if err != nil {
-		// expand first so we can quote later
-		orig := fmt.Sprintf("%#v", m)
-		_, _ = fmt.Fprintf(l.output, `{"message","failed to encode message", "encoder":"%T","log":%q,"cause":%q}`, l.encoder, orig, err)
-	}
-}
-
-// Info logs a non-error message with the given key/value pairs as context.
-//
-// The msg argument should be used to add some constant description to
-// the log line.  The key/value pairs can then be used to add additional
-// variable information.  The key/value pairs should alternate string
-// keys and arbitrary values.
-func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
-	if !l.Enabled() {
-		return
-	}
-	l.log(msg, combine(l.context, keysAndValues...))
-}
-
-// Error logs an error, with the given message and key/value pairs as context.
-// It functions similarly to calling Info with the "error" named value, but may
-// have unique behavior, and should be preferred for logging errors (see the
-// package documentations for more information).
-//
-// The msg field should be used to add context to any underlying error,
-// while the err field should be used to attach the actual error that
-// triggered this log line, if present.
-func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
-	if !l.Enabled() {
-		return
-	}
-
-	if err == nil {
-		l.Info(msg, keysAndValues)
-		return
-	}
-
-	switch err.(type) {
-	case *kverrors.KVError:
-		// nothing to be done
-	default:
-		err = kverrors.New(err.Error())
-	}
-
-	l.Info(msg, append(keysAndValues, ErrorKey, err)...)
-}
-
-// V returns an Logger value for a specific verbosity level, relative to
-// this Logger.  In other words, V values are additive.  V higher verbosity
-// level means a log message is less important.  It's illegal to pass a log
-// level less than zero.
-func (l *Logger) V(v int) logr.Logger {
-	return NewLogger(l.name, l.output, Verbosity(v)+l.verbosity, l.encoder, l.context)
-}
-
-// WithName adds a new element to the logger's name.
-// Successive calls with WithName continue to append
-// suffixes to the logger's name.  It's strongly recommended
-// that name segments contain only letters, digits, and hyphens
-// (see the package documentation for more information).
-func (l *Logger) WithName(name string) logr.Logger {
-	newName := name
-
-	if l.name != "" {
-		newName = fmt.Sprintf("%s_%s", l.name, name)
-	}
-
-	return NewLogger(
-		newName,
-		l.output,
-		l.verbosity,
-		l.encoder,
-		l.context,
-	)
 }

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,9 @@ func TestInit(t *testing.T) {
 
 	log.MustInit(component)
 	require.NoError(t, log.SetOutput(buf))
-	ll, ok := log.GetLogger().(*log.Logger)
+
+	ll := log.GetLogger()
+	_, ok := ll.GetSink().(*log.LogSink)
 	require.True(t, ok)
 
 	ll.Info("laskdjfhiausdc")
@@ -130,7 +133,7 @@ func TestSetLogLevel(t *testing.T) {
 }
 
 func TestSetOutput_WithKnownLogger_SetsOutputOnLogger(t *testing.T) {
-	logger := log.NewLogger("", ioutil.Discard, 0, log.JSONEncoder{})
+	logger := logr.New(log.NewLogSink("", ioutil.Discard, 0, log.JSONEncoder{}))
 	log.UseLogger(logger)
 
 	msg := t.Name()
@@ -146,7 +149,7 @@ func TestSetOutput_WithKnownLogger_SetsOutputOnLogger(t *testing.T) {
 }
 
 func TestSetOutput_WithUnknownLogger_Errors(t *testing.T) {
-	log.UseLogger(nopLogger{})
+	log.UseLogger(logr.New(nopLogSink{}))
 
 	buf := bytes.NewBuffer(nil)
 	err := log.SetOutput(buf)
@@ -158,8 +161,8 @@ func TestSetOutput_WithUnknownLogger_Errors(t *testing.T) {
 func TestWithName(t *testing.T) {
 	obs, _ := NewObservedLogger()
 
-	logger := log.NewLogger("", ioutil.Discard, 0, obs)
-	logger = logger.WithName("mycomponent").(*log.Logger)
+	logger := logr.New(log.NewLogSink("", ioutil.Discard, 0, obs))
+	logger = logger.WithName("mycomponent")
 	log.UseLogger(logger)
 
 	msg := t.Name()

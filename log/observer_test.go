@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/ViaQ/logerr/log"
 	"github.com/stretchr/testify/require"
 	"github.com/ViaQ/logerr/kverrors"
@@ -150,15 +151,14 @@ func parseEntry(entry interface{}) *observedEntry {
 }
 
 // NewObservedLogger creates a new observableEncoder and a logger that uses the encoder.
-func NewObservedLogger() (*observableEncoder, *log.Logger) {
+func NewObservedLogger() (*observableEncoder, logr.Logger) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	log.TimestampFunc = func() string {
 		return now
 	}
 
 	te := &observableEncoder{}
+	ls := log.NewLogSink("", ioutil.Discard, 0, te)
 
-	ll := log.NewLogger("", ioutil.Discard, 0, te)
-
-	return te, ll
+	return te, logr.New(ls)
 }

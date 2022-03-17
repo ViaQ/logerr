@@ -4,26 +4,25 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type nopLogger struct{}
+type nopLogSink struct{}
 
-func (nopLogger) Enabled() bool {
+func (nopLogSink) Init(logr.RuntimeInfo) {
+}
+
+func (nopLogSink) Enabled(int) bool {
 	return false
 }
 
-func (nopLogger) Info(string, ...interface{}) {
+func (nopLogSink) Info(int, string, ...interface{}) {
 }
 
-func (nopLogger) Error(error, string, ...interface{}) {
+func (nopLogSink) Error(error, string, ...interface{}) {
 }
 
-func (nopLogger) V(int) logr.Logger {
+func (nopLogSink) WithValues(...interface{}) logr.LogSink {
 	return nil
 }
 
-func (nopLogger) WithValues(...interface{}) logr.Logger {
-	return nil
-}
-
-func (nopLogger) WithName(string) logr.Logger {
+func (nopLogSink) WithName(string) logr.LogSink {
 	return nil
 }

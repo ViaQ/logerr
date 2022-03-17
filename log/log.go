@@ -18,13 +18,8 @@ var (
 	defaultOutput  io.Writer = os.Stdout
 	defautLogLevel           = 0
 
-	// logLevel sets the level at which you want logs to be displayed
-	// By default the verbosity is set to 0 and all logs that do not
-	// use V(...) will be printed. To increase logging verbosity
-	logLevel = defautLogLevel
-
 	mtx    sync.RWMutex
-	logger logr.Logger = NewLogger("", os.Stdout, 0, JSONEncoder{})
+	logger logr.Logger = logr.New(NewLogSink("", os.Stdout, 0, JSONEncoder{}))
 )
 
 // Init initializes the logger. This is required to use logging correctly
@@ -46,13 +41,14 @@ func InitWithOptions(component string, opts []Option, keyValuePairs ...interface
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	ll := NewLogger(component, defaultOutput, 0, JSONEncoder{}, keyValuePairs...)
+	ls := NewLogSink(component, defaultOutput, 0, JSONEncoder{}, keyValuePairs...)
 
 	for _, opt := range opts {
-		opt(ll)
+		opt(ls)
 	}
 
 	// don't lock because we already have a lock
+	ll := logr.New(ls)
 	useLogger(ll)
 }
 
@@ -77,6 +73,16 @@ func UseLogger(l logr.Logger) {
 // To use mtx.Lock see UseLogger
 func useLogger(l logr.Logger) {
 	logger = l
+}
+
+// V returns an Logger value for a specific verbosity level, relative to
+// this Logger.  In other words, V values are additive.  V higher verbosity
+// level means a log message is less important.
+// V(level uint8) Logger
+func V(level int) logr.Logger {
+	mtx.RLock()
+	defer mtx.RUnlock()
+	return logger.V(level)
 }
 
 // Info logs a non-error message with the given key/value pairs as context.
@@ -113,30 +119,6 @@ func WithValues(keysAndValues ...interface{}) logr.Logger {
 	return logger.WithValues(keysAndValues...)
 }
 
-// SetLogLevel sets the output verbosity
-func SetLogLevel(v int) {
-	mtx.Lock()
-	defer mtx.Unlock()
-	logLevel = v
-}
-
-// SetOutput sets the logger output to w if the root logger is *log.Logger
-// otherwise it returns ErrUnknownLoggerType
-func SetOutput(w io.Writer) error {
-	mtx.RLock()
-	defer mtx.RUnlock()
-	switch ll := logger.(type) {
-	case *Logger:
-		ll.SetOutput(w)
-	default:
-		return kverrors.Add(ErrUnknownLoggerType,
-			"logger_type", fmt.Sprintf("%T", logger),
-			"expected_type", fmt.Sprintf("%T", &Logger{}),
-		)
-	}
-	return nil
-}
-
 // WithName adds a new element to the logger's name.
 // Successive calls with WithName continue to append
 // suffixes to the logger's name.  It's strongly recommended
@@ -148,12 +130,35 @@ func WithName(name string) logr.Logger {
 	return logger.WithName(name)
 }
 
-// V returns an Logger value for a specific verbosity level, relative to
-// this Logger.  In other words, V values are additive.  V higher verbosity
-// level means a log message is less important.
-// V(level uint8) Logger
-func V(level int) logr.Logger {
+// SetLogLevel sets the output verbosity
+func SetLogLevel(v int) error {
+	mtx.Lock()
+	defer mtx.Unlock()
+	switch ls := logger.GetSink().(type) {
+	case *LogSink:
+		ls.SetVerbosity(v)
+	default:
+		return kverrors.Add(ErrUnknownLoggerType,
+			"logger_type", fmt.Sprintf("%T", logger),
+			"expected_type", fmt.Sprintf("%T", &LogSink{}),
+		)
+	}
+	return nil
+}
+
+// SetOutput sets the logger output to w if the root logger is *log.Logger
+// otherwise it returns ErrUnknownLoggerType
+func SetOutput(w io.Writer) error {
 	mtx.RLock()
 	defer mtx.RUnlock()
-	return logger.V(level)
+	switch ls := logger.GetSink().(type) {
+	case *LogSink:
+		ls.SetOutput(w)
+	default:
+		return kverrors.Add(ErrUnknownLoggerType,
+			"logger_type", fmt.Sprintf("%T", logger),
+			"expected_type", fmt.Sprintf("%T", &LogSink{}),
+		)
+	}
+	return nil
 }
