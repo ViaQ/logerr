@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -223,7 +223,7 @@ func TestLogger_V_Info(t *testing.T) {
 	for verbosity := 1; verbosity < 5; verbosity++ {
 		for logLevel := 1; logLevel < 5; logLevel++ {
 			obs, logger := NewObservedLogger()
-			logger.GetSink().(*log.LogSink).SetVerbosity(verbosity)
+			logger.GetSink().(*log.Sink).SetVerbosity(verbosity)
 
 			logger.V(logLevel).Info("hello, world")
 
@@ -246,7 +246,7 @@ func TestLogger_V_Error(t *testing.T) {
 	for verbosity := 1; verbosity < 5; verbosity++ {
 		for logLevel := 1; logLevel < 5; logLevel++ {
 			obs, logger := NewObservedLogger()
-			logger.GetSink().(*log.LogSink).SetVerbosity(verbosity)
+			logger.GetSink().(*log.Sink).SetVerbosity(verbosity)
 
 			logger.V(logLevel).Error(io.ErrUnexpectedEOF, "hello, world")
 
@@ -316,7 +316,7 @@ func TestLogger_LogsLevel(t *testing.T) {
 	const v = 2
 
 	obs, logger := NewObservedLogger()
-	logger.GetSink().(*log.LogSink).SetVerbosity(v)
+	logger.GetSink().(*log.Sink).SetVerbosity(v)
 
 	logger.V(v).Info("hello, world", "city", "Athens")
 
@@ -372,7 +372,7 @@ func TestLogger_LogLineWithNoContext(t *testing.T) {
 		Message: msg,
 	}
 
-	buf, err := l.MarshalJSON()
+	buf,err := l.MarshalJSON()
 	assert.Nil(t, err)
-	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey, msg))
+	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey,msg))
 }

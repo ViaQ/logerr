@@ -108,8 +108,8 @@ var TimestampFunc = func() string {
 	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
-// LogSink writes logs to a specified output
-type LogSink struct {
+// Sink writes logs to a specified output
+type Sink struct {
 	mtx       sync.RWMutex
 	verbosity Verbosity
 	output    io.Writer
@@ -119,8 +119,8 @@ type LogSink struct {
 }
 
 // NewLogSink creates a new logsink
-func NewLogSink(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues ...interface{}) *LogSink {
-	return &LogSink{
+func NewLogSink(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues ...interface{}) *Sink {
+	return &Sink{
 		name:      name,
 		verbosity: v,
 		output:    w,
@@ -131,12 +131,12 @@ func NewLogSink(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues 
 
 // Init receives optional information about the logr library for LogSink
 // implementations that need it.
-func (ls *LogSink) Init(info logr.RuntimeInfo) {}
+func (ls *Sink) Init(info logr.RuntimeInfo) {}
 
 // Enabled tests whether this logsink is enabled.  For example, commandline
 // flags might be used to set the logging verbosity and disable some info
 // logs.
-func (ls *LogSink) Enabled(level int) bool {
+func (ls *Sink) Enabled(level int) bool {
 	ls.mtx.RLock()
 	defer ls.mtx.RUnlock()
 	return ls.verbosity <= Verbosity(level)
@@ -148,7 +148,7 @@ func (ls *LogSink) Enabled(level int) bool {
 // the log line.  The key/value pairs can then be used to add additional
 // variable information.  The key/value pairs should alternate string
 // keys and arbitrary values.
-func (ls *LogSink) Info(level int, msg string, keysAndValues ...interface{}) {
+func (ls *Sink) Info(level int, msg string, keysAndValues ...interface{}) {
 	if !ls.Enabled(level) {
 		return
 	}
@@ -163,7 +163,7 @@ func (ls *LogSink) Info(level int, msg string, keysAndValues ...interface{}) {
 // The msg field should be used to add context to any underlying error,
 // while the err field should be used to attach the actual error that
 // triggered this log line, if present.
-func (ls *LogSink) Error(err error, msg string, keysAndValues ...interface{}) {
+func (ls *Sink) Error(err error, msg string, keysAndValues ...interface{}) {
 	if err == nil {
 		ls.Info(int(ls.verbosity), msg, keysAndValues)
 		return
@@ -180,7 +180,7 @@ func (ls *LogSink) Error(err error, msg string, keysAndValues ...interface{}) {
 }
 
 // WithValues clones the logsink and appends keysAndValues
-func (ls *LogSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
+func (ls *Sink) WithValues(keysAndValues ...interface{}) logr.LogSink {
 	return ls.withValues(keysAndValues...)
 }
 
@@ -189,7 +189,7 @@ func (ls *LogSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
 // suffixes to the logsink's name.  It's strongly recommended
 // that name segments contain only letters, digits, and hyphens
 // (see the package documentation for more information).
-func (ls *LogSink) WithName(name string) logr.LogSink {
+func (ls *Sink) WithName(name string) logr.LogSink {
 	newName := name
 	if ls.name != "" {
 		newName = fmt.Sprintf("%s_%s", ls.name, name)
@@ -199,14 +199,14 @@ func (ls *LogSink) WithName(name string) logr.LogSink {
 }
 
 // SetOutput sets the writer that JSON is written to
-func (ls *LogSink) SetOutput(w io.Writer) {
+func (ls *Sink) SetOutput(w io.Writer) {
 	ls.mtx.Lock()
 	defer ls.mtx.Unlock()
 	ls.output = w
 }
 
 // SetVerbosity sets the log level allowed by the logsink
-func (ls *LogSink) SetVerbosity(v int) {
+func (ls *Sink) SetVerbosity(v int) {
 	ls.mtx.Lock()
 	defer ls.mtx.Unlock()
 	ls.verbosity = Verbosity(v)
@@ -214,7 +214,7 @@ func (ls *LogSink) SetVerbosity(v int) {
 
 // withValues clones the logger and appends keysAndValues
 // but returns a struct instead of the logr.Logger interface
-func (ls *LogSink) withValues(keysAndValues ...interface{}) *LogSink {
+func (ls *Sink) withValues(keysAndValues ...interface{}) *Sink {
 	ll := NewLogSink(ls.name, ls.output, ls.verbosity, ls.encoder)
 	ll.context = combine(ls.context, keysAndValues...)
 	return ll
@@ -222,7 +222,7 @@ func (ls *LogSink) withValues(keysAndValues ...interface{}) *LogSink {
 
 // log will log the message. It DOES NOT check Enabled() first so that should
 // be checked by it's callers
-func (ls *LogSink) log(msg string, context map[string]interface{}) {
+func (ls *Sink) log(msg string, context map[string]interface{}) {
 	_, file, line, _ := runtime.Caller(3)
 	file = sourcePath(file)
 	m := Line{

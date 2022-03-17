@@ -16,7 +16,6 @@ var ErrUnknownLoggerType = kverrors.New("unknown error type")
 
 var (
 	defaultOutput  io.Writer = os.Stdout
-	defautLogLevel           = 0
 
 	mtx    sync.RWMutex
 	logger logr.Logger = logr.New(NewLogSink("", os.Stdout, 0, JSONEncoder{}))
@@ -135,12 +134,12 @@ func SetLogLevel(v int) error {
 	mtx.Lock()
 	defer mtx.Unlock()
 	switch ls := logger.GetSink().(type) {
-	case *LogSink:
+	case *Sink:
 		ls.SetVerbosity(v)
 	default:
 		return kverrors.Add(ErrUnknownLoggerType,
 			"logger_type", fmt.Sprintf("%T", logger),
-			"expected_type", fmt.Sprintf("%T", &LogSink{}),
+			"expected_type", fmt.Sprintf("%T", &Sink{}),
 		)
 	}
 	return nil
@@ -152,12 +151,12 @@ func SetOutput(w io.Writer) error {
 	mtx.RLock()
 	defer mtx.RUnlock()
 	switch ls := logger.GetSink().(type) {
-	case *LogSink:
+	case *Sink:
 		ls.SetOutput(w)
 	default:
 		return kverrors.Add(ErrUnknownLoggerType,
 			"logger_type", fmt.Sprintf("%T", logger),
-			"expected_type", fmt.Sprintf("%T", &LogSink{}),
+			"expected_type", fmt.Sprintf("%T", &Sink{}),
 		)
 	}
 	return nil

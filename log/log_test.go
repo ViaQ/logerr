@@ -44,7 +44,7 @@ func TestInit(t *testing.T) {
 	require.NoError(t, log.SetOutput(buf))
 
 	ll := log.GetLogger()
-	_, ok := ll.GetSink().(*log.LogSink)
+	_, ok := ll.GetSink().(*log.Sink)
 	require.True(t, ok)
 
 	ll.Info("laskdjfhiausdc")
