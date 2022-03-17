@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr"
-	"github.com/ViaQ/logerr/log"
-	"github.com/stretchr/testify/require"
 	"github.com/ViaQ/logerr/kverrors"
+	"github.com/ViaQ/logerr/log"
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 )
 
 type Fields map[string]interface{}
@@ -129,7 +129,7 @@ func parseEntry(entry interface{}) *observedEntry {
 		log.Error(err, "failed to parse string as verbosity")
 	}
 
-	var resultErr error= nil
+	var resultErr error = nil
 	if errVal, ok := m.Context[log.ErrorKey]; ok {
 		if resultErr, ok = errVal.(error); !ok {
 			fmt.Fprintf(os.Stderr, "failed to parse error from message: %v\n", kverrors.New("malformed/missing key", "key", log.ErrorKey))
@@ -139,12 +139,12 @@ func parseEntry(entry interface{}) *observedEntry {
 
 	result := &observedEntry{
 		Timestamp: m.Timestamp,
-		FileLine: m.FileLine,
+		FileLine:  m.FileLine,
 		Verbosity: log.Verbosity(verbosity),
 		Component: m.Component,
-		Message: m.Message,
-		Context: m.Context,
-		Error: resultErr,
+		Message:   m.Message,
+		Context:   m.Context,
+		Error:     resultErr,
 	}
 
 	return result

@@ -9,9 +9,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

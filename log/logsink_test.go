@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -372,7 +372,7 @@ func TestLogger_LogLineWithNoContext(t *testing.T) {
 		Message: msg,
 	}
 
-	buf,err := l.MarshalJSON()
+	buf, err := l.MarshalJSON()
 	assert.Nil(t, err)
-	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey,msg))
+	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey, msg))
 }
