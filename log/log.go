@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	// ErrUnknownLoggerType is returned when trying to perform a *Logger only function
+	// ErrUnknownSinkType is returned when trying to perform a *Logger only function
 	// that is incompatible with logr.Logger interface
 	ErrUnknownSinkType = kverrors.New("unknown log sink type")
 
@@ -21,7 +21,7 @@ func DefaultLogger() logr.Logger {
 	return logr.New(NewLogSink("", defaultOutput, 0, JSONEncoder{}))
 }
 
-// NewLoggerWithOptions creates a logger with the provided opts and key value pairs
+// NewLogger creates a logger with the provided key value pairs
 func NewLogger(component string, keyValuePairs ...interface{}) logr.Logger {
 	return NewLoggerWithOptions(component, nil, keyValuePairs...)
 }
