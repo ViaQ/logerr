@@ -40,14 +40,14 @@ func InitWithOptions(component string, opts []Option, keyValuePairs ...interface
 	mtx.Lock()
 	defer mtx.Unlock()
 
-	ls := NewLogSink(component, defaultOutput, 0, JSONEncoder{}, keyValuePairs...)
+	s := NewLogSink(component, defaultOutput, 0, JSONEncoder{}, keyValuePairs...)
 
 	for _, opt := range opts {
-		opt(ls)
+		opt(s)
 	}
 
 	// don't lock because we already have a lock
-	ll := logr.New(ls)
+	ll := logr.New(s)
 	useLogger(ll)
 }
 
@@ -133,9 +133,9 @@ func WithName(name string) logr.Logger {
 func SetLogLevel(v int) error {
 	mtx.Lock()
 	defer mtx.Unlock()
-	switch ls := logger.GetSink().(type) {
+	switch s := logger.GetSink().(type) {
 	case *Sink:
-		ls.SetVerbosity(v)
+		s.SetVerbosity(v)
 	default:
 		return kverrors.Add(ErrUnknownLoggerType,
 			"logger_type", fmt.Sprintf("%T", logger),
@@ -150,9 +150,9 @@ func SetLogLevel(v int) error {
 func SetOutput(w io.Writer) error {
 	mtx.RLock()
 	defer mtx.RUnlock()
-	switch ls := logger.GetSink().(type) {
+	switch s := logger.GetSink().(type) {
 	case *Sink:
-		ls.SetOutput(w)
+		s.SetOutput(w)
 	default:
 		return kverrors.Add(ErrUnknownLoggerType,
 			"logger_type", fmt.Sprintf("%T", logger),

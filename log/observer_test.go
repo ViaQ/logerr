@@ -158,7 +158,7 @@ func NewObservedLogger() (*observableEncoder, logr.Logger) {
 	}
 
 	te := &observableEncoder{}
-	ls := log.NewLogSink("", ioutil.Discard, 0, te)
+	s := log.NewLogSink("", ioutil.Discard, 0, te)
 
-	return te, logr.New(ls)
+	return te, logr.New(s)
 }
