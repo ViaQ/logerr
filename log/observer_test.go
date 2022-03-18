@@ -126,7 +126,7 @@ func parseEntry(entry interface{}) *observedEntry {
 	m := entry.(log.Line)
 	verbosity, err := strconv.Atoi(m.Verbosity)
 	if err != nil {
-		log.Error(err, "failed to parse string as verbosity")
+		log.DefaultLogger().Error(err, "failed to parse string as verbosity")
 	}
 
 	var resultErr error = nil

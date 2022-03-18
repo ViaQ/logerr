@@ -131,23 +131,21 @@ func NewLogSink(name string, w io.Writer, v Verbosity, e Encoder, keysAndValues 
 
 // Init receives optional information about the logr library for LogSink
 // implementations that need it.
-func (s *Sink) Init(info logr.RuntimeInfo) { }
+func (s *Sink) Init(info logr.RuntimeInfo) {}
 
-// Enabled tests whether this logsink is enabled.  For example, commandline
-// flags might be used to set the logging verbosity and disable some info
-// logs.
+// Enabled determines if a logger should record a log. If the log's verbosity
+// is higher or equal to that the logger's level, the log is recorded. Otherwise,
+// it is skipped.
 func (s *Sink) Enabled(level int) bool {
+	// Mutex lock is used here. Don't need to use it for Info & Error
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
+
 	return s.verbosity >= Verbosity(level)
 }
 
-// Info logs a non-error message with the given key/value pairs as context.
-//
-// The msg argument should be used to add some constant description to
-// the log line.  The key/value pairs can then be used to add additional
-// variable information.  The key/value pairs should alternate string
-// keys and arbitrary values.
+// Info logs a non-error message with the given key/value pairs as context. Info
+// will check to see if the log is enabled for the logger's level before recording.
 func (s *Sink) Info(level int, msg string, keysAndValues ...interface{}) {
 	if !s.Enabled(level) {
 		return
@@ -155,15 +153,11 @@ func (s *Sink) Info(level int, msg string, keysAndValues ...interface{}) {
 	s.log(msg, combine(s.context, keysAndValues...))
 }
 
-// Error logs an error, with the given message and key/value pairs as context.
-// It functions similarly to calling Info with the "error" named value, but may
-// have unique behavior, and should be preferred for logging errors (see the
-// package documentations for more information). This message will always be omitted
-//
-// The msg field should be used to add context to any underlying error,
-// while the err field should be used to attach the actual error that
-// triggered this log line, if present.
+// Error logs an error, with the given message and key/value pairs as context. Unlike
+// Info, it bypasses the Enabled check. Logs will always be recorded from this method.
 func (s *Sink) Error(err error, msg string, keysAndValues ...interface{}) {
+	// Use 0 as the level since it is the smallest level a logger can have
+	// and thus will always pass the Enabled check.
 	if err == nil {
 		s.Info(0, msg, keysAndValues)
 		return
@@ -179,19 +173,22 @@ func (s *Sink) Error(err error, msg string, keysAndValues ...interface{}) {
 	s.Info(0, msg, append(keysAndValues, ErrorKey, err)...)
 }
 
-// WithValues clones the logsink and appends keysAndValues
+// WithValues clones the logsink and appends keysAndValues.
 func (s *Sink) WithValues(keysAndValues ...interface{}) logr.LogSink {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
 	ss := NewLogSink(s.name, s.output, s.verbosity, s.encoder)
 	ss.context = combine(s.context, keysAndValues...)
+
 	return ss
 }
 
-// WithName adds a new element to the logsink's name.
-// Successive cals with WithName continue to append
-// suffixes to the logsink's name.  It's strongly recommended
-// that name segments contain only letters, digits, and hyphens
-// (see the package documentation for more information).
+// WithName clones the logsink and overwrites the name.
 func (s *Sink) WithName(name string) logr.LogSink {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
 	newName := name
 	if s.name != "" {
 		newName = fmt.Sprintf("%s_%s", s.name, name)
@@ -204,6 +201,7 @@ func (s *Sink) WithName(name string) logr.LogSink {
 func (s *Sink) SetOutput(w io.Writer) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
 	s.output = w
 }
 
@@ -211,6 +209,7 @@ func (s *Sink) SetOutput(w io.Writer) {
 func (s *Sink) SetVerbosity(v int) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
+
 	s.verbosity = Verbosity(v)
 }
 
@@ -218,7 +217,6 @@ func (s *Sink) SetVerbosity(v int) {
 // be checked by it's callers
 func (s *Sink) log(msg string, context map[string]interface{}) {
 	_, file, line, _ := runtime.Caller(3)
-	fmt.Printf("%d\n", line)
 	file = sourcePath(file)
 	m := Line{
 		Timestamp: TimestampFunc(),
