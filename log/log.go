@@ -14,11 +14,13 @@ var (
 	ErrUnknownSinkType = kverrors.New("unknown log sink type")
 
 	defaultOutput = os.Stdout
+
+	defaultLogger = logr.New(NewLogSink("", defaultOutput, 0, JSONEncoder{}))
 )
 
 // DefaultLogger creates a logger without any key value pairs
 func DefaultLogger() logr.Logger {
-	return logr.New(NewLogSink("", defaultOutput, 0, JSONEncoder{}))
+	return defaultLogger
 }
 
 // NewLogger creates a logger with the provided key value pairs
