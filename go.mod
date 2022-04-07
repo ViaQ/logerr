@@ -12,3 +12,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
+
+retract [v1.1.0, v1.1.1] // Improper versioning of breaking changes
