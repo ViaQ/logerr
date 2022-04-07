@@ -12,7 +12,6 @@ import (
 
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +54,7 @@ var unsupportedValues = []float64{
 func TestLogger_Info_UnsupportedValues(t *testing.T) {
 	for _, unsupportedValue := range unsupportedValues {
 		buf := bytes.NewBuffer(nil)
-		logger := logr.New(log.NewLogSink("", buf, 0, log.JSONEncoder{}))
+		logger := log.NewLogger("", buf, 0, log.JSONEncoder{})
 		logger.Info("Test unsupported value", "value", unsupportedValue)
 
 		if buf.Len() == 0 {
@@ -69,7 +68,7 @@ func TestLogger_Info_UnsupportedValues(t *testing.T) {
 func TestLogger_Error_UnsupportedValues(t *testing.T) {
 	for _, unsupportedValue := range unsupportedValues {
 		buf := bytes.NewBuffer(nil)
-		logger := log.NewLogSink("", buf, 0, log.JSONEncoder{})
+		logger := log.NewLogger("", buf, 0, log.JSONEncoder{})
 		err := kverrors.New("an error")
 		logger.Error(err, "Test unsupported value", "key", unsupportedValue)
 
@@ -218,18 +217,21 @@ func TestLogger_Error_WorksWithNilError(t *testing.T) {
 }
 
 func TestLogger_V_Info(t *testing.T) {
-	// loop through log levels 1-5 and log all of them to verify that they either
-	// are or are not logged according to verbosity above
 	for verbosity := 1; verbosity < 5; verbosity++ {
+		log.SetLogLevel(verbosity)
+
+		// loop through log levels 1-5 and log all of them to verify that they either
+		// are or are not logged according to verbosity above
 		for logLevel := 1; logLevel < 5; logLevel++ {
 			obs, logger := NewObservedLogger()
-			logger.GetSink().(*log.Sink).SetVerbosity(verbosity)
 
 			logger.V(logLevel).Info("hello, world")
 
 			logs := obs.TakeAll()
 
-			if verbosity >= logLevel {
+			shouldBeLogged := verbosity >= logLevel
+
+			if shouldBeLogged {
 				assert.Len(t, logs, 1, "expected log to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
 				assert.EqualValues(t, "hello, world", logs[0].Message)
 			} else {
@@ -240,18 +242,26 @@ func TestLogger_V_Info(t *testing.T) {
 }
 
 func TestLogger_V_Error(t *testing.T) {
-	// Error messages should always be logged regardless of level
 	for verbosity := 1; verbosity < 5; verbosity++ {
+		log.SetLogLevel(verbosity)
+
+		// loop through log levels 1-5 and log all of them to verify that they either
+		// are or are not logged according to verbosity above
 		for logLevel := 1; logLevel < 5; logLevel++ {
 			obs, logger := NewObservedLogger()
-			logger.GetSink().(*log.Sink).SetVerbosity(verbosity)
 
 			logger.V(logLevel).Error(io.ErrUnexpectedEOF, "hello, world")
 
 			logs := obs.TakeAll()
 
-			assert.Len(t, logs, 1, "expected log to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
-			assert.EqualValues(t, "hello, world", logs[0].Message)
+			shouldBeLogged := verbosity >= logLevel
+
+			if shouldBeLogged {
+				assert.Len(t, logs, 1, "expected log to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
+				assert.EqualValues(t, "hello, world", logs[0].Message)
+			} else {
+				assert.Empty(t, logs, "expected NO logs to be present for verbosity:%d, logLevel:%d", verbosity, logLevel)
+			}
 		}
 	}
 }
@@ -268,11 +278,8 @@ func TestLogger_SetsVerbosity(t *testing.T) {
 
 func TestLogger_TestSetOutput(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
-
-	s := log.NewLogSink("", ioutil.Discard, 0, log.JSONEncoder{})
-	s.SetOutput(buf)
-
-	logger := logr.New(s)
+	logger := log.NewLogger("", ioutil.Discard, 0, log.JSONEncoder{})
+	logger.SetOutput(buf)
 
 	msg := "hello, world"
 	logger.Info(msg)
@@ -295,7 +302,7 @@ func TestLogger_Info_PrintsError_WhenEncoderErrors(t *testing.T) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	logger := logr.New(log.NewLogSink("", buf, 0, fenc))
+	logger := log.NewLogger("", buf, 0, fenc)
 
 	msg := "hello, world"
 	logger.Info(msg)
@@ -314,7 +321,7 @@ func TestLogger_LogsLevel(t *testing.T) {
 	const v = 2
 
 	obs, logger := NewObservedLogger()
-	logger.GetSink().(*log.Sink).SetVerbosity(v)
+	log.SetLogLevel(v)
 
 	logger.V(v).Info("hello, world", "city", "Athens")
 
@@ -334,12 +341,10 @@ func TestLogger_ProductionLogsLevel(t *testing.T) {
 	const v = 0
 
 	buf := bytes.NewBuffer(nil)
-	s := log.NewLogSink("", ioutil.Discard, v, log.JSONEncoder{})
-	s.SetOutput(buf)
+	logger := log.NewLogger("", ioutil.Discard, v, log.JSONEncoder{})
+	logger.SetOutput(buf)
 
 	msg := "hello, world"
-	logger := logr.New(s)
-
 	logger.Info(msg)
 
 	if buf.Len() == 0 {
@@ -353,12 +358,10 @@ func TestLogger_DeveloperLogsLevel(t *testing.T) {
 	const v = 2
 
 	buf := bytes.NewBuffer(nil)
-	s := log.NewLogSink("", ioutil.Discard, v, log.JSONEncoder{})
-	s.SetOutput(buf)
+	logger := log.NewLogger("", ioutil.Discard, v, log.JSONEncoder{})
+	logger.SetOutput(buf)
 
 	msg := "hello, world"
-	logger := logr.New(s)
-
 	logger.Info(msg)
 
 	if buf.Len() == 0 {
@@ -374,7 +377,7 @@ func TestLogger_LogLineWithNoContext(t *testing.T) {
 		Message: msg,
 	}
 
-	buf, err := l.MarshalJSON()
+	buf,err := l.MarshalJSON()
 	assert.Nil(t, err)
-	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey, msg))
+	assert.Contains(t, string(buf), fmt.Sprintf(`%q:%q`, log.MessageKey,msg))
 }
