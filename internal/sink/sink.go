@@ -1,7 +1,6 @@
-package log
+package sink
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,94 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ViaQ/logerr/internal/kv"
-	"github.com/ViaQ/logerr/kverrors"
+	"github.com/ViaQ/logerr/v2/internal/kv"
+	"github.com/ViaQ/logerr/v2/kverrors"
 	"github.com/go-logr/logr"
 )
-
-// Keys used to log specific builtin fields
-const (
-	TimeStampKey = "_ts"
-	FileLineKey  = "_file:line"
-	LevelKey     = "_level"
-	ComponentKey = "_component"
-	MessageKey   = "_message"
-	ErrorKey     = "_error"
-)
-
-// Line orders log line fields
-type Line struct {
-	Timestamp string
-	FileLine  string
-	Verbosity string
-	Component string
-	Message   string
-	Context   map[string]interface{}
-}
-
-// LineJSON add json tags to Line struct (production logs)
-type LineJSON struct {
-	Timestamp string                 `json:"_ts"`
-	FileLine  string                 `json:"-"`
-	Verbosity string                 `json:"_level"`
-	Component string                 `json:"_component"`
-	Message   string                 `json:"_message"`
-	Context   map[string]interface{} `json:"-"`
-}
-
-// LineJSONDev add json tags to Line struct (developer logs, enable using environment variable LOG_DEV)
-type LineJSONDev struct {
-	Timestamp string                 `json:"_ts"`
-	FileLine  string                 `json:"_file:line"`
-	Verbosity string                 `json:"_level"`
-	Component string                 `json:"_component"`
-	Message   string                 `json:"_message"`
-	Context   map[string]interface{} `json:"-"`
-}
-
-// MarshalJSON implements custom marshaling for log line: (1) flattening context (2) support for developer mode
-func (l Line) MarshalJSON() ([]byte, error) {
-	lineTemp := LineJSON(l)
-
-	lineValue, err := json.Marshal(lineTemp)
-	if err != nil {
-		return nil, err
-	}
-	verbosity, errConvert := strconv.Atoi(l.Verbosity)
-	if verbosity > 1 && errConvert == nil {
-		lineTempDev := LineJSONDev(l)
-		lineValue, err = json.Marshal(lineTempDev)
-		if err != nil {
-			return nil, err
-		}
-	}
-	lineValue = lineValue[1 : len(lineValue)-1]
-
-	contextValue, err := json.Marshal(lineTemp.Context)
-	if err != nil {
-		return nil, err
-	}
-	contextValue = contextValue[1 : len(contextValue)-1]
-
-	sep := ""
-	if len(contextValue) > 0 {
-		sep = ","
-	}
-	return []byte(fmt.Sprintf("{%s%s%s}", lineValue, sep, contextValue)), nil
-}
-
-// Verbosity is a level of verbosity to log between 0 and math.MaxInt32
-// However it is recommended to keep the numbers between 0 and 3
-type Verbosity int
-
-func (v Verbosity) String() string {
-	return strconv.Itoa(int(v))
-}
-
-// MarshalJSON marshas JSON
-func (v Verbosity) MarshalJSON() ([]byte, error) {
-	return []byte(v.String()), nil
-}
 
 // TimestampFunc returns a string formatted version of the current time.
 // This should probably only be used with tests or if you want to change
@@ -213,11 +128,17 @@ func (s *Sink) SetVerbosity(v int) {
 	s.verbosity = Verbosity(v)
 }
 
+// GetVerbosity returns the log level
+func (s *Sink) GetVerbosity() int {
+	return int(s.verbosity)
+}
+
 // log will log the message. It DOES NOT check Enabled() first so that should
 // be checked by it's callers
 func (s *Sink) log(msg string, context map[string]interface{}) {
 	_, file, line, _ := runtime.Caller(3)
 	file = sourcePath(file)
+
 	m := Line{
 		Timestamp: TimestampFunc(),
 		FileLine:  fmt.Sprintf("%s:%s", file, strconv.Itoa(line)),
@@ -238,16 +159,13 @@ func (s *Sink) log(msg string, context map[string]interface{}) {
 // combine creates a new map combining context and keysAndValues.
 func combine(context map[string]interface{}, keysAndValues ...interface{}) map[string]interface{} {
 	nc := make(map[string]interface{}, len(context)+len(keysAndValues)/2)
-	for i := 0; i < len(keysAndValues); i += 2 {
-		if i+1 < len(keysAndValues) {
-			key, ok := keysAndValues[i].(string) // It should be a string.
-			if !ok {                             // But this is not the place to panic
-				key = fmt.Sprintf("%s", keysAndValues[i]) // So use this expensive conversion instead.
-			}
-			nc[key] = keysAndValues[i+1]
-		}
-	}
+
 	for k, v := range context {
+		nc[k] = v
+	}
+
+	kve := kv.ToMap(keysAndValues...)
+	for k, v := range kve {
 		nc[k] = v
 	}
 

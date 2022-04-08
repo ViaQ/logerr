@@ -1,4 +1,4 @@
-module github.com/ViaQ/logerr
+module github.com/ViaQ/logerr/v2
 
 go 1.17
 
@@ -12,5 +12,3 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 )
-
-retract [v1.1.0, v1.1.1] // Improper versioning of breaking changes

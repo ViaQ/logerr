@@ -1,37 +1,26 @@
-# 2.0.0
+# v2.0.0
 
-As of `logr@v1.0.0`, the `logr.Logger` is considered to be a defined `struct` instead of an `interface`. The implementation layer (now referred to as `logr.LogSink`) has been entirely restructured. Now, the `logerr` library will provide `logr.Logger` objects and ways to affect the underlying `Sink` operations.
+## Removal of singleton behavior
 
-- Instead of `log.V()`, `log.Info()`, `log.Error()` methods, use `log.DefaultLogger().V()`, `log.DefaultLogger().Info()`, `log.DefaultLogger().Error()`
+Due to the structural changes of `logr@v1`, several features of this library have been modified. Most notable of these changes is the lack of a singleton logger. It is recommended that developers create a logger instance with `NewLogger` and either keep it as their own singleton or pass the instance throughout the application to use where needed. Methods like `Info` and `Error` are still callable with a `logr.Logger` instance.
 
-- Instead of `log.SetOutput()`, `log.SetLogLevel()`, use either of the following methods:
+ex:
 
-Method 1:
-```go
-l := log.DefaultLogger()
-s, err := log.GetSink(l)
+```golang
+import (
+    "github.com/ViaQ/logerr/v2/log"
+)
 
-if err != nil {
-    // Some action
-}
+logger := log.NewLogger("example-logger")
 
-s.SetVerbosity(1)
-s.SetOutput(ioutil.Discard)
-
-l.Info("hello world")
+logger.Info("Now logging info message")
+logger.Error(errors.New("New error"), "Now logging new error")
 ```
 
-Method 2:
-```go
-l := log.DefaultLogger()
-// This method panics, but DefaultLogger will not
-// panic because it uses Sink.
-log.MustGetSink(l).SetVerbosity(1)
-log.MustGetSink(l).SetOutput(ioutil.Discard)
+## Logger Creation
 
-l.Info("hello world")
-```
+`Init` and `InitWithOptions` have been removed. Please use `NewLogger(component string, opts ...Option)`.
 
-- Instead of `log.UseLogger`, `log.GetLogger`, keep the logger instance until it is no longer needed
+## Removal of explicit `SetOutput` and `SetLevel`
 
-- Instead of `log.Init` or `log.InitWithOptions`, use `log.NewLogger` or `log.NewLoggerWithOption`
+As a byproduct of the changes in `logr@v1`, these methods have been moved into the internal logging implementation of `logr.Sink`: `Sink`. It is recommended that a logger instance is created with the intended writer and verbosity level. If the writer or verbosity needs to be changed, a new logger should be generated.

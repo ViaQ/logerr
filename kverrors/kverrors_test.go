@@ -6,8 +6,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ViaQ/logerr/internal/kv"
-	"github.com/ViaQ/logerr/kverrors"
+	"github.com/ViaQ/logerr/v2/internal/kv"
+	"github.com/ViaQ/logerr/v2/kverrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

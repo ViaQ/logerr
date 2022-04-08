@@ -1,4 +1,4 @@
-package log
+package sink
 
 import (
 	"encoding/json"
