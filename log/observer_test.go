@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ViaQ/logerr/log"
-	"github.com/stretchr/testify/require"
 	"github.com/ViaQ/logerr/kverrors"
+	"github.com/ViaQ/logerr/log"
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
 )
 
 type Fields map[string]interface{}
@@ -125,10 +126,10 @@ func parseEntry(entry interface{}) *observedEntry {
 	m := entry.(log.Line)
 	verbosity, err := strconv.Atoi(m.Verbosity)
 	if err != nil {
-		log.Error(err, "failed to parse string as verbosity")
+		log.DefaultLogger().Error(err, "failed to parse string as verbosity")
 	}
 
-	var resultErr error= nil
+	var resultErr error = nil
 	if errVal, ok := m.Context[log.ErrorKey]; ok {
 		if resultErr, ok = errVal.(error); !ok {
 			fmt.Fprintf(os.Stderr, "failed to parse error from message: %v\n", kverrors.New("malformed/missing key", "key", log.ErrorKey))
@@ -138,27 +139,26 @@ func parseEntry(entry interface{}) *observedEntry {
 
 	result := &observedEntry{
 		Timestamp: m.Timestamp,
-		FileLine: m.FileLine,
+		FileLine:  m.FileLine,
 		Verbosity: log.Verbosity(verbosity),
 		Component: m.Component,
-		Message: m.Message,
-		Context: m.Context,
-		Error: resultErr,
+		Message:   m.Message,
+		Context:   m.Context,
+		Error:     resultErr,
 	}
 
 	return result
 }
 
 // NewObservedLogger creates a new observableEncoder and a logger that uses the encoder.
-func NewObservedLogger() (*observableEncoder, *log.Logger) {
+func NewObservedLogger() (*observableEncoder, logr.Logger) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	log.TimestampFunc = func() string {
 		return now
 	}
 
 	te := &observableEncoder{}
+	s := log.NewLogSink("", ioutil.Discard, 0, te)
 
-	ll := log.NewLogger("", ioutil.Discard, 0, te)
-
-	return te, ll
+	return te, logr.New(s)
 }

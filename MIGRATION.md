@@ -1,4 +1,4 @@
-# 1.1.0
+# 2.0.0
 
 As of `logr@v1.0.0`, the `logr.Logger` is considered to be a defined `struct` instead of an `interface`. The implementation layer (now referred to as `logr.LogSink`) has been entirely restructured. Now, the `logerr` library will provide `logr.Logger` objects and ways to affect the underlying `Sink` operations.
 

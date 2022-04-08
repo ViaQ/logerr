@@ -11,6 +11,7 @@ import (
 
 	"github.com/ViaQ/logerr/kverrors"
 	"github.com/ViaQ/logerr/log"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,48 +24,41 @@ func TestLogger_V_Integration(t *testing.T) {
 	for i := 1; i < 5; i++ {
 		verbosity := i
 		testName := fmt.Sprintf("verbosity-%d", verbosity)
-		log.MustInitWithOptions(testName, []log.Option{
+		l := log.NewLoggerWithOptions(testName, []log.Option{
 			log.WithOutput(ioutil.Discard),
 			log.WithLogLevel(verbosity),
 		})
 		t.Run(testName, func(t *testing.T) {
 			for logLevel := 1; logLevel < 5; logLevel++ {
-				log.V(logLevel).Info("hello, world")
+				l.V(logLevel).Info("hello, world")
 			}
 		})
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestNewLogger(t *testing.T) {
 	component := "mycomponent"
 	buf := bytes.NewBuffer(nil)
 
-	log.MustInit(component)
-	require.NoError(t, log.SetOutput(buf))
-	ll, ok := log.GetLogger().(*log.Logger)
-	require.True(t, ok)
+	l := log.NewLogger(component)
+	s, err := log.GetSink(l)
 
-	ll.Info("laskdjfhiausdc")
+	require.NoError(t, err)
+
+	s.SetOutput(buf)
+	l.Info("laskdjfhiausdc")
 
 	expected := fmt.Sprintf(`%q:%q`, log.ComponentKey, component)
-
 	actual := string(buf.Bytes())
 
 	require.Contains(t, actual, expected)
 }
 
-func TestUseLogger_SetsLogger(t *testing.T) {
-	_, logger := NewObservedLogger()
-	log.UseLogger(logger)
-	require.Equal(t, logger, log.GetLogger())
-}
-
 func TestInfo(t *testing.T) {
-	obs, logger := NewObservedLogger()
-	log.UseLogger(logger)
-	msg := t.Name()
+	obs, l := NewObservedLogger()
 
-	log.Info(msg)
+	msg := t.Name()
+	l.Info(msg)
 
 	logs := obs.Logs()
 	require.Len(t, logs, 1)
@@ -72,13 +66,12 @@ func TestInfo(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	obs, logger := NewObservedLogger()
-	log.UseLogger(logger)
+	obs, l := NewObservedLogger()
 
 	msg := t.Name()
 	err := errors.New("fail boat")
 
-	log.Error(err, msg)
+	l.Error(err, msg)
 
 	logs := obs.Logs()
 	require.Len(t, logs, 1)
@@ -88,11 +81,10 @@ func TestError(t *testing.T) {
 }
 
 func TestWithValues(t *testing.T) {
-	obs, logger := NewObservedLogger()
-	log.UseLogger(logger)
+	obs, l := NewObservedLogger()
 
 	msg := t.Name()
-	ll := log.WithValues("hello", "world")
+	ll := l.WithValues("hello", "world")
 
 	t.Run("Error", func(t *testing.T) {
 		ll.Error(errors.New("fail boat"), msg)
@@ -114,14 +106,16 @@ func TestWithValues(t *testing.T) {
 }
 
 func TestSetLogLevel(t *testing.T) {
-	obs, logger := NewObservedLogger()
-	log.UseLogger(logger)
+	obs, l := NewObservedLogger()
+	s, err := log.GetSink(l)
+
+	require.NoError(t, err)
 
 	const logLevel = 4
 	msg := t.Name()
 
-	log.SetLogLevel(logLevel)
-	log.V(logLevel).Info(msg)
+	s.SetVerbosity(logLevel)
+	l.V(logLevel).Info(msg)
 
 	logs := obs.TakeAll()
 	require.NotEmpty(t, logs)
@@ -129,43 +123,39 @@ func TestSetLogLevel(t *testing.T) {
 	require.EqualValues(t, msg, logs[0].Message)
 }
 
-func TestSetOutput_WithKnownLogger_SetsOutputOnLogger(t *testing.T) {
-	logger := log.NewLogger("", ioutil.Discard, 0, log.JSONEncoder{})
-	log.UseLogger(logger)
+func TestSetOutput(t *testing.T) {
+	obs, l := NewObservedLogger()
+	s, err := log.GetSink(l)
+
+	require.NoError(t, err)
 
 	msg := t.Name()
-
 	buf := bytes.NewBuffer(nil)
-	require.NoError(t, log.SetOutput(buf))
-	log.Info(msg)
 
-	output := string(buf.Bytes())
-	require.NotEmpty(t, output)
+	s.SetOutput(buf)
 
-	require.Contains(t, output, msg)
+	l.Info(msg)
+	logs := obs.TakeAll()
+
+	require.NotEmpty(t, logs)
+	require.Contains(t, logs[0].Message, msg)
 }
 
-func TestSetOutput_WithUnknownLogger_Errors(t *testing.T) {
-	log.UseLogger(nopLogger{})
-
-	buf := bytes.NewBuffer(nil)
-	err := log.SetOutput(buf)
+func TestGetSink_WithUnknownLogSink_Errors(t *testing.T) {
+	l := logr.New(nopLogSink{})
+	_, err := log.GetSink(l)
 
 	actual := kverrors.Root(err)
-	require.Equal(t, log.ErrUnknownLoggerType, actual)
+	require.Equal(t, log.ErrUnknownSinkType, actual)
 }
 
 func TestWithName(t *testing.T) {
 	obs, _ := NewObservedLogger()
 
-	logger := log.NewLogger("", ioutil.Discard, 0, obs)
-	logger = logger.WithName("mycomponent").(*log.Logger)
-	log.UseLogger(logger)
+	l := logr.New(log.NewLogSink("", ioutil.Discard, 0, obs)).WithName("mycomponent")
+	ll := l.WithName("mynameis")
 
 	msg := t.Name()
-
-	ll := log.WithName("mynameis")
-
 	ll.Info(msg)
 
 	logs := obs.TakeAll()
@@ -176,13 +166,15 @@ func TestWithName(t *testing.T) {
 }
 
 func TestV(t *testing.T) {
-	obs, logger := NewObservedLogger()
-	log.UseLogger(logger)
-	log.SetLogLevel(1)
+	obs, l := NewObservedLogger()
+	s, err := log.GetSink(l)
+
+	require.NoError(t, err)
 
 	msg := t.Name()
 
-	log.V(1).Info(msg)
+	s.SetVerbosity(1)
+	l.V(1).Info(msg)
 
 	logs := obs.TakeAll()
 	require.NotEmpty(t, logs)
