@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ViaQ/logerr/internal/kv"
+	"github.com/ViaQ/logerr/v2/internal/kv"
 )
 
 // Keys used to log specific builtin fields

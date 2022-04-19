@@ -6,17 +6,21 @@ import (
 
 // ToMap converts keysAndValues to a map
 func ToMap(keysAndValues ...interface{}) map[string]interface{} {
-	kve := map[string]interface{}{}
+	kvlen := len(keysAndValues)
+	kve := make(map[string]interface{}, kvlen/2)
 
-	for i, kv := range keysAndValues {
-		if i%2 == 1 {
-			continue
+	for i, j := 0, 1; i < kvlen && j < kvlen; i, j = i+2, j+2 {
+		key, ok := keysAndValues[i].(string)
+
+		// Expecting a string as the key, however will make a
+		// best guess through conversion if it isn't.
+		if !ok {
+			key = fmt.Sprintf("%s", keysAndValues[i])
 		}
-		if len(keysAndValues) <= i+1 {
-			continue
-		}
-		kve[fmt.Sprintf("%s", kv)] = keysAndValues[i+1]
+
+		kve[key] = keysAndValues[j]
 	}
+
 	return kve
 }
 
