@@ -1,14 +1,20 @@
-package log
+// Package static provides a simple static logger implementation for easy migration of existing pre-v2 code.
+//
+// The package is usually imported aliased as "log" to be compatible with the v1 approach.
+//
+// The static logger instance needs to be initialized during startup of the application using SetLogger.
+package static
 
 import (
 	"sync"
 
+	"github.com/ViaQ/logerr/v2/log"
 	"github.com/go-logr/logr"
 )
 
 var (
 	lock   sync.RWMutex
-	logger = NewLogger("uninitialized")
+	logger = log.NewLogger("uninitialized")
 )
 
 // SetLogger sets the static logger instance.
