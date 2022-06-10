@@ -25,6 +25,13 @@ func SetLogger(replacement logr.Logger) {
 	logger = replacement
 }
 
+// Logger returns the static logger instance.
+func Logger() logr.Logger {
+	lock.RLock()
+	defer lock.RUnlock()
+	return logger
+}
+
 // WithName returns a logger with name added to the component.
 // This uses the static logger instance.
 func WithName(name string) logr.Logger {
